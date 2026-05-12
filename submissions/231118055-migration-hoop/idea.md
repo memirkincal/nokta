@@ -1,51 +1,43 @@
-# Nokta Migration & Hoop
+# Nokta AI Note Analysis
 
 ## Thesis
 
-Rough notes become more useful when they are not only deduplicated, but also reviewed by a human when the signal is uncertain. This slice turns pasted dots into idea cards, then escalates selected cards into a mentor review room so the final artifact keeps both machine clustering and human judgement.
+Rough notes become much more useful when they are clustered into idea cards and then answered by an AI helper on the same screen. This slice turns pasted dots into a compact board, lets the user add extra notes one by one, then keeps a live AI chat running under the analysis panel.
 
 ## Problem
 
 - Notes are scattered across WhatsApp exports, voice transcriptions, email drafts, and quick bullets.
 - Similar ideas are often repeated with slightly different wording.
-- When a card is unclear or high risk, there is no visible human review step.
-- Review feedback is usually lost instead of being written back into the idea artifact.
+- Users usually want a fast answer, not another navigation layer.
+- Review feedback is useful only if it is visible right after clustering.
+- A useful assistant should also be able to keep talking after the first answer lands.
 
 ## Solution
 
 The app follows a short pipeline:
 
 1. Normalize pasted fragments into note objects.
-2. Cluster similar notes into idea cards.
-3. Show provenance, confidence, and merge candidates.
-4. Let the user keep a card separate, merge the closest match, or send the card to Hoop.
-5. Capture a mentor transcript and write the result back into the card.
-
-## Hoop extension
-
-`nokta-hoop` is used as the inspiration for the human review slice. In this submission the selected card can enter a review room, where the app shows:
-
-- review mode: HOOTL, HOTL, or HITL
-- role: mentor, expert, or reviewer
-- session timeline
-- transcript text
-- writeback note
-
-If Stream env vars are available, the app tries a token-server handshake. If not, it keeps a deterministic local rehearsal so the demo still runs.
+2. Let the user append extra short notes into a quick-add queue.
+3. Cluster similar notes into idea cards.
+4. Show provenance, confidence, and merge candidates.
+5. Ask OpenRouter to summarize the cluster, answer the user's notes directly, and continue the conversation below the analysis card.
+6. Fall back to deterministic local analysis when the API key is missing.
 
 ## Why this is different
 
 - Provenance tags keep the source trail visible.
 - Confidence rails make the cluster quality easy to read.
-- Merge and keep-separate actions are explicit, not hidden in AI output.
-- Mentor writeback turns the review step into a lasting artifact.
+- The AI answer sits next to the cards instead of hiding behind another screen.
+- A quick-add note queue makes it easier to build a richer board from multiple fragments.
+- The follow-up chat keeps the assistant available after the first analysis, which feels more like a real helper.
+- Local fallback keeps the demo working even when the API is not configured.
 
 ## Non-goals
 
 - Full backend syncing
-- Real production Stream infrastructure in this repo snapshot
 - A marketplace, social feed, or large multi-screen product
+- Voice capture inside the app itself
 
 ## Summary
 
-This is a focused Track C slice with a human review layer. It keeps the core submission small, but still shows a meaningful Nokta direction: capture, dedup, review, and write back.
+This is a focused Track C slice with a direct AI answer layer and a small chat loop. It keeps the submission small, but still shows a meaningful Nokta direction: capture, dedup, answer, chat, and keep provenance visible.

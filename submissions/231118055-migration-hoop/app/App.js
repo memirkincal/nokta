@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -18,42 +18,14 @@ import {
   MD3DarkTheme,
   PaperProvider,
   ProgressBar,
-  SegmentedButtons,
   Snackbar,
   Surface,
   Text as PaperText,
   TextInput,
 } from 'react-native-paper';
 import { StatusBar } from 'expo-status-bar';
-import {
-  SAMPLE_PASTE,
-  SOURCE_OPTIONS,
-  attachMentorReview,
-  buildIdeaCards,
-  buildMentorSession,
-  getBoardStats,
-  markCardSeparate,
-  mergeCardWithClosest,
-  titleCase,
-} from './src/noktaEngine';
-
-const VIEW_OPTIONS = [
-  { value: 'capture', label: 'Capture' },
-  { value: 'dedup', label: 'Dedup' },
-  { value: 'hoop', label: 'Hoop' },
-];
-
-const REVIEW_MODE_OPTIONS = [
-  { value: 'HOOTL', label: 'HOOTL' },
-  { value: 'HOTL', label: 'HOTL' },
-  { value: 'HITL', label: 'HITL' },
-];
-
-const ROLE_OPTIONS = [
-  { value: 'mentor', label: 'Mentor' },
-  { value: 'expert', label: 'Expert' },
-  { value: 'reviewer', label: 'Reviewer' },
-];
+import { SAMPLE_PASTE, SOURCE_OPTIONS } from './src/noktaEngine';
+import { analyzeNotes, chatAboutNotes, getOpenRouterAnalysisConfig } from './src/openaiNotes';
 
 const theme = {
   ...MD3DarkTheme,
@@ -72,756 +44,210 @@ const theme = {
 };
 
 function App() {
-  const [activeView, setActiveView] = useState('capture');
+  const aiConfig = useMemo(() => getOpenRouterAnalysisConfig(), []);
   const [currentSource, setCurrentSource] = useState('WhatsApp');
   const [rawText, setRawText] = useState(SAMPLE_PASTE);
-  const [cards, setCards] = useState([]);
-  const [activeCardId, setActiveCardId] = useState(null);
+  const [noteDraft, setNoteDraft] = useState('');
+  const [noteItems, setNoteItems] = useState([]);
+  const [analysis, setAnalysis] = useState(null);
+  const [selectedCardId, setSelectedCardId] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [reviewMode, setReviewMode] = useState('HOTL');
-  const [reviewRole, setReviewRole] = useState('mentor');
-  const [session, setSession] = useState({
-    cardId: null,
-    status: 'idle',
-    bridgeState: 'Local rehearsal mode',
-    transcript: '',
-    writeback: '',
-    recommendation: 'keep-separate',
-    timeline: [],
-    mode: 'HOTL',
-    role: 'mentor',
-    summary: '',
-    tokenPreview: '',
-  });
+  const [chatInput, setChatInput] = useState('');
+  const [chatMessages, setChatMessages] = useState([]);
+  const [isChatting, setIsChatting] = useState(false);
   const [notice, setNotice] = useState('');
 
-  const timersRef = useRef([]);
-  const reviewRunRef = useRef(0);
+  const composedText = useMemo(() => {
+    const chunks = [rawText.trim(), ...noteItems].filter(Boolean);
+    return chunks.join('\n\n');
+  }, [noteItems, rawText]);
 
-  const streamConfigured = Boolean(
-    process.env.EXPO_PUBLIC_STREAM_API_KEY ||
-      process.env.EXPO_PUBLIC_TOKEN_SERVER_URL ||
-      process.env.EXPO_PUBLIC_STREAM_ENABLE_TRANSCRIPTION === 'true'
-  );
-  const tokenServerUrl = process.env.EXPO_PUBLIC_TOKEN_SERVER_URL || '';
-
-  const selectedCard = useMemo(
-    () => cards.find((card) => card.id === activeCardId) || null,
-    [cards, activeCardId]
-  );
-  const boardStats = useMemo(() => getBoardStats(cards), [cards]);
-  const averageConfidence = useMemo(() => {
-    if (!cards.length) {
-      return 0;
+  const selectedCard = useMemo(() => {
+    if (!analysis?.cards?.length) {
+      return null;
     }
 
-    return cards.reduce((sum, card) => sum + card.confidence, 0) / cards.length;
-  }, [cards]);
+    return (
+      analysis.cards.find((card) => card.id === selectedCardId) || analysis.cards[0] || null
+    );
+  }, [analysis, selectedCardId]);
 
-  useEffect(() => {
-    if (activeCardId && !cards.some((card) => card.id === activeCardId)) {
-      setActiveCardId(cards[0]?.id || null);
-    }
-  }, [activeCardId, cards]);
-
-  useEffect(
-    () => () => {
-      timersRef.current.forEach((timer) => clearTimeout(timer));
-      timersRef.current = [];
-      reviewRunRef.current += 1;
-    },
-    []
-  );
-
-  const clearTimers = () => {
-    timersRef.current.forEach((timer) => clearTimeout(timer));
-    timersRef.current = [];
+  const stats = analysis?.stats || {
+    totalNotes: 0,
+    clusters: 0,
+    avgConfidence: 0,
   };
 
-  const pushNotice = (message) => {
-    setNotice(message);
-  };
+  const configLabel = aiConfig.enabled ? `${aiConfig.providerLabel} ${aiConfig.model}` : 'Local fallback';
+  const modeLabel =
+    analysis?.providerLabel === 'Local'
+      ? 'Local fallback'
+      : analysis?.providerLabel
+      ? `${analysis.providerLabel} ${analysis.model}`
+      : configLabel;
+
+  const selectedDecisionLabel = selectedCard
+    ? selectedCard.aiRecommendation === 'merge'
+      ? 'Merge'
+      : selectedCard.aiRecommendation === 'keep-separate'
+      ? 'Keep separate'
+      : 'Review'
+    : 'Review';
+
+  const noteCountLabel = noteItems.length ? `${noteItems.length} ek not` : 'Hazır';
+
+  const buildNoteSources = () =>
+    noteItems.map((text, index) => ({
+      id: `note-${index}`,
+      source: currentSource,
+      text,
+    }));
 
   const handleLoadSample = () => {
-    clearTimers();
     setRawText(SAMPLE_PASTE);
+    setNoteDraft('');
+    setNoteItems([]);
+    setChatInput('');
+    setChatMessages([]);
     setCurrentSource('WhatsApp');
-    setActiveView('capture');
-    pushNotice('Sample notes loaded.');
+    setAnalysis(null);
+    setSelectedCardId(null);
+    setNotice('Sample notes loaded.');
   };
 
   const handleReset = () => {
-    clearTimers();
     setRawText('');
-    setCards([]);
-    setActiveCardId(null);
-    setIsAnalyzing(false);
-    setSession({
-      cardId: null,
-      status: 'idle',
-      bridgeState: 'Local rehearsal mode',
-      transcript: '',
-      writeback: '',
-      recommendation: 'keep-separate',
-      timeline: [],
-      mode: reviewMode,
-      role: reviewRole,
-      summary: '',
-      tokenPreview: '',
-    });
-    setActiveView('capture');
-    pushNotice('Workspace cleared.');
+    setNoteDraft('');
+    setNoteItems([]);
+    setChatInput('');
+    setChatMessages([]);
+    setAnalysis(null);
+    setSelectedCardId(null);
+    setCurrentSource('WhatsApp');
+    setNotice('Workspace cleared.');
   };
 
-  const handleAnalyze = () => {
-    if (!rawText.trim()) {
-      pushNotice('Paste some notes first.');
+  const handleAddNote = () => {
+    const trimmed = noteDraft.trim();
+
+    if (!trimmed) {
+      setNotice('Eklemek için kısa bir not yaz.');
       return;
     }
 
-    clearTimers();
+    setNoteItems((prev) => [...prev, trimmed]);
+    setNoteDraft('');
+    setNotice('Ek not eklendi.');
+  };
+
+  const handleRemoveNote = (indexToRemove) => {
+    setNoteItems((prev) => prev.filter((_, index) => index !== indexToRemove));
+    setNotice('Ek not silindi.');
+  };
+
+  const handleAnalyze = async () => {
+    if (!composedText.trim()) {
+      setNotice('Paste some notes first.');
+      return;
+    }
+
     setIsAnalyzing(true);
 
-    const timer = setTimeout(() => {
-      const result = buildIdeaCards(rawText, currentSource);
+    try {
+      const result = await analyzeNotes({ rawText: composedText, source: currentSource });
+      setAnalysis(result);
+      setSelectedCardId(result.cards[0]?.id || null);
+      setChatMessages([]);
+      setChatInput('');
 
-      if (!result.cards.length) {
-        setCards([]);
-        setActiveCardId(null);
-        setIsAnalyzing(false);
-        pushNotice('No meaningful notes found.');
-        return;
+      if (result.provider && result.provider !== 'local') {
+        setNotice(`${result.providerLabel} cevap verdi: ${result.model}.`);
+      } else if (result.error) {
+        setNotice(`Local fallback kullanildi: ${result.error}`);
+      } else {
+        setNotice('Local analiz hazir.');
       }
-
-      setCards(result.cards);
-      setActiveCardId(result.cards[0]?.id || null);
+    } catch (error) {
+      setNotice(error.message || 'Analysis failed.');
+    } finally {
       setIsAnalyzing(false);
-      setActiveView('dedup');
-      pushNotice(`${result.stats.clusters} idea card(s) built from ${result.stats.totalNotes} notes.`);
-    }, 420);
-
-    timersRef.current.push(timer);
+    }
   };
 
-  const handleMergeCard = (cardId) => {
-    const result = mergeCardWithClosest(cards, cardId);
-    if (!result.merged) {
-      pushNotice(result.message);
+  const handleSendChat = async () => {
+    const question = chatInput.trim();
+
+    if (!question) {
+      setNotice('Sohbet icin bir soru yaz.');
       return;
     }
 
-    setCards(result.cards);
-    setActiveCardId(result.mergedCard?.id || cardId);
-    setActiveView('dedup');
-    pushNotice(result.message);
-  };
+    const nextHistory = [...chatMessages, { role: 'user', content: question }];
+    setChatMessages(nextHistory);
+    setChatInput('');
+    setIsChatting(true);
 
-  const handleKeepSeparate = (cardId) => {
-    const nextCards = markCardSeparate(cards, cardId);
-    setCards(nextCards);
-    setActiveCardId(cardId);
-    setActiveView('dedup');
-    pushNotice('Card locked as separate.');
-  };
-
-  const fetchStreamToken = async (serverUrl, payload) => {
-    const endpoint = `${serverUrl.replace(/\/$/, '')}/token`;
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Token request failed with status ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.token || data.accessToken || data.streamToken || '';
-  };
-
-  const beginMentorReview = (cardId) => {
-    const card = cards.find((item) => item.id === cardId);
-    if (!card) {
-      pushNotice('Select a card first.');
-      return;
-    }
-
-    clearTimers();
-    setActiveCardId(cardId);
-    setActiveView('hoop');
-
-    const runId = reviewRunRef.current + 1;
-    reviewRunRef.current = runId;
-
-    setSession({
-      cardId,
-      status: 'requesting',
-      bridgeState: streamConfigured ? 'Requesting Stream token' : 'Local rehearsal mode',
-      transcript: '',
-      writeback: '',
-      recommendation: card.confidence >= 0.78 && card.closeMatch ? 'merge' : 'keep-separate',
-      timeline: [
-        { step: 'Request', detail: 'Mentor review requested from the selected card.' },
-      ],
-      mode: reviewMode,
-      role: reviewRole,
-      summary: '',
-      tokenPreview: '',
-    });
-
-    const timer = setTimeout(async () => {
-      let bridgeState = streamConfigured ? 'Stream bridge ready' : 'Local rehearsal mode';
-      let tokenPreview = '';
-
-      if (streamConfigured && tokenServerUrl) {
-        try {
-          const token = await fetchStreamToken(tokenServerUrl, {
-            userId: 'guest-mentor',
-            roomName: card.title,
-            mode: reviewMode,
-            role: reviewRole,
-          });
-          tokenPreview = token ? `${token.slice(0, 8)}...` : '';
-          bridgeState = token ? 'Stream token received' : 'Stream bridge ready';
-        } catch (error) {
-          bridgeState = 'Stream bridge fallback to local rehearsal';
-        }
-      }
-
-      if (reviewRunRef.current !== runId) {
-        return;
-      }
-
-      const sessionResult = buildMentorSession(card, {
-        mode: reviewMode,
-        role: reviewRole,
-        streamConfigured,
+    try {
+      const reply = await chatAboutNotes({
+        question,
+        rawText: composedText,
+        source: currentSource,
+        notes: buildNoteSources(),
+        cards: analysis?.cards || [],
+        analysis,
+        history: nextHistory,
       });
 
-      setSession({
-        cardId,
-        status: 'ready',
-        bridgeState,
-        transcript: sessionResult.transcript,
-        writeback: sessionResult.writeback,
-        recommendation: sessionResult.recommendation,
-        timeline: sessionResult.timeline,
-        mode: sessionResult.mode,
-        role: sessionResult.role,
-        summary: sessionResult.summary,
-        tokenPreview,
-      });
-      pushNotice(`${card.title} is ready for mentor review.`);
-    }, 520);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: reply.reply,
+          meta: reply.providerLabel ? `${reply.providerLabel}${reply.model ? ` ${reply.model}` : ''}` : '',
+        },
+      ]);
 
-    timersRef.current.push(timer);
-  };
-
-  const handleWriteback = () => {
-    if (!session.cardId) {
-      pushNotice('Start a mentor review first.');
-      return;
-    }
-
-    let nextCards = cards;
-    let targetId = session.cardId;
-
-    if (session.recommendation === 'merge') {
-      const mergeResult = mergeCardWithClosest(nextCards, session.cardId);
-      if (mergeResult.merged) {
-        nextCards = mergeResult.cards;
-        targetId = mergeResult.mergedCard.id;
+      if (reply.error && reply.provider === 'local') {
+        setNotice(`Sohbet yerel modda: ${reply.error}`);
+      } else if (reply.providerLabel) {
+        setNotice(`${reply.providerLabel} sohbet cevabi hazir.`);
       }
-    } else {
-      nextCards = markCardSeparate(nextCards, session.cardId);
+    } catch (error) {
+      setNotice(error.message || 'Chat failed.');
+    } finally {
+      setIsChatting(false);
     }
-
-    nextCards = attachMentorReview(nextCards, targetId, {
-      mode: session.mode,
-      role: session.role,
-      recommendation: session.recommendation === 'merge' ? 'mentor-merge' : 'mentor-separate',
-      transcript: session.transcript,
-      note: session.writeback,
-      reviewState: 'written-back',
-      approved: session.recommendation !== 'keep-separate',
-    });
-
-    setCards(nextCards);
-    setActiveCardId(targetId);
-    setActiveView('dedup');
-    setSession((prev) => ({
-      ...prev,
-      cardId: targetId,
-      status: 'written-back',
-    }));
-    pushNotice('Mentor writeback applied.');
   };
 
-  const handleShareTranscript = async () => {
-    if (!session.transcript) {
-      pushNotice('No transcript is available yet.');
+  const handleShare = async () => {
+    if (!analysis) {
+      setNotice('No analysis to share.');
       return;
     }
+
+    const lines = [
+      'Nokta AI note analysis',
+      `Mode: ${modeLabel}`,
+      `Title: ${analysis.title}`,
+      '',
+      analysis.summary,
+      '',
+      analysis.directAnswer,
+      '',
+      'Next steps:',
+      ...(analysis.nextSteps.length
+        ? analysis.nextSteps.map((step) => `- ${step}`)
+        : ['- No next steps yet.']),
+    ];
 
     await Share.share({
-      message: [
-        `Nokta Hoop session for ${selectedCard?.title || 'selected card'}`,
-        `Bridge: ${session.bridgeState}`,
-        `Mode: ${session.mode}`,
-        `Role: ${session.role}`,
-        '',
-        session.transcript,
-      ].join('\n'),
+      message: lines.join('\n'),
     });
   };
 
-  const activeBoard = (
-    <Surface style={styles.heroCard} elevation={1}>
-      <View style={styles.heroHeader}>
-        <View style={styles.heroCopy}>
-          <PaperText variant="headlineSmall" style={styles.heroTitle}>
-            Track C + Hoop
-          </PaperText>
-          <PaperText style={styles.heroSubtitle}>
-            Paste rough notes, dedup them into idea cards, then route the selected card into a human review room.
-          </PaperText>
-        </View>
-        <Chip icon={streamConfigured ? 'lan-connect' : 'account-voice'} style={styles.heroChip}>
-          {streamConfigured ? 'Stream ready' : 'Local demo'}
-        </Chip>
-      </View>
-
-      <View style={styles.metricGrid}>
-        <MetricTile label="Cards" value={boardStats.cards} hint="dedup output" accent="primary" />
-        <MetricTile
-          label="Reviewed"
-          value={boardStats.reviewed}
-          hint="writebacks"
-          accent="secondary"
-        />
-        <MetricTile
-          label="Locked"
-          value={boardStats.locked}
-          hint="kept separate"
-          accent="tertiary"
-        />
-        <MetricTile
-          label="Confidence"
-          value={`${Math.round(averageConfidence * 100)}%`}
-          hint="board average"
-          accent="primary"
-        />
-      </View>
-    </Surface>
-  );
-
-  const sourceRail = (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sourceRail}>
-      {SOURCE_OPTIONS.map((option) => (
-        <Chip
-          key={option.key}
-          selected={currentSource === option.key}
-          icon={option.icon}
-          style={[styles.sourceChip, currentSource === option.key && styles.sourceChipSelected]}
-          onPress={() => setCurrentSource(option.key)}
-        >
-          {option.label}
-        </Chip>
-      ))}
-    </ScrollView>
-  );
-
-  const capturePanel = (
-    <View style={styles.panelStack}>
-      <Surface style={styles.panelCard} elevation={1}>
-        <View style={styles.panelHeader}>
-          <View>
-            <PaperText variant="titleLarge" style={styles.panelTitle}>
-              Capture workspace
-            </PaperText>
-            <PaperText style={styles.panelSubtitle}>
-              Label new notes with a source, then push them through the Track C pipeline.
-            </PaperText>
-          </View>
-          <Chip icon="information-outline" style={styles.helperChip}>
-            Prefixes like `wa:` or `mail:` override the selected source.
-          </Chip>
-        </View>
-
-        {sourceRail}
-
-        <TextInput
-          value={rawText}
-          onChangeText={setRawText}
-          mode="outlined"
-          multiline
-          numberOfLines={10}
-          placeholder="Paste WhatsApp exports, bullet notes, email snippets, or voice note transcriptions..."
-          style={styles.input}
-          outlineStyle={styles.inputOutline}
-          textColor={theme.colors.onSurface}
-          activeOutlineColor={theme.colors.primary}
-        />
-
-        <View style={styles.actionRow}>
-          <Button
-            mode="contained"
-            icon="auto-fix"
-            onPress={handleAnalyze}
-            loading={isAnalyzing}
-            disabled={isAnalyzing || !rawText.trim()}
-            style={styles.primaryButton}
-          >
-            Analyze notes
-          </Button>
-          <Button mode="outlined" icon="book-open-variant" onPress={handleLoadSample} style={styles.secondaryButton}>
-            Load sample
-          </Button>
-          <Button mode="text" icon="restart" onPress={handleReset} textColor={theme.colors.onSurfaceVariant}>
-            Reset
-          </Button>
-        </View>
-      </Surface>
-
-      <Surface style={styles.panelCard} elevation={1}>
-        <View style={styles.panelHeader}>
-          <View>
-            <PaperText variant="titleLarge" style={styles.panelTitle}>
-              Why this slice is original
-            </PaperText>
-            <PaperText style={styles.panelSubtitle}>
-              Provenance tags, confidence rails, and mentor writeback keep this from looking like a generic note app.
-            </PaperText>
-          </View>
-        </View>
-
-        <View style={styles.storyRow}>
-          <StoryCard title="1. Normalize" description="Strip bullets, detect source prefixes, and turn fragments into note objects." />
-          <StoryCard title="2. Dedup" description="Compare token overlap, bigrams, and intent anchors to cluster similar notes." />
-          <StoryCard title="3. Hoop" description="Send a card to a human review room, capture a transcript, and write it back." />
-        </View>
-      </Surface>
-    </View>
-  );
-
-  const dedupPanel = (
-    <View style={styles.panelStack}>
-      <Surface style={styles.panelCard} elevation={1}>
-        <View style={styles.panelHeader}>
-          <View>
-            <PaperText variant="titleLarge" style={styles.panelTitle}>
-              Dedup board
-            </PaperText>
-            <PaperText style={styles.panelSubtitle}>
-              Each card keeps its provenance trail, confidence score, and a merge candidate.
-            </PaperText>
-          </View>
-          <Chip icon="shape-outline" style={styles.helperChip}>
-            {cards.length ? `${cards.length} cards` : 'No cards yet'}
-          </Chip>
-        </View>
-
-        {!cards.length ? (
-          <View style={styles.emptyState}>
-            <PaperText variant="titleMedium" style={styles.emptyTitle}>
-              Nothing has been clustered yet.
-            </PaperText>
-            <PaperText style={styles.panelSubtitle}>
-              Go back to Capture, paste the sample notes, and run Analyze.
-            </PaperText>
-          </View>
-        ) : (
-          <View style={styles.cardStack}>
-            {cards.map((card) => {
-              const isActive = card.id === selectedCard?.id;
-              const lockedLabel = card.locked ? 'Locked' : card.decision === 'merged' ? 'Merged' : 'Auto';
-              const closeMatchLabel = card.closeMatch ? `${card.closeMatch.title} (${Math.round(card.closeMatch.score * 100)}%)` : 'No close match';
-
-              return (
-                <Pressable
-                  key={card.id}
-                  onPress={() => {
-                    setActiveCardId(card.id);
-                    setActiveView('hoop');
-                  }}
-                  style={({ pressed }) => [
-                    styles.ideaPressable,
-                    pressed && styles.ideaPressablePressed,
-                  ]}
-                >
-                  <Card style={[styles.ideaCard, isActive && styles.ideaCardActive, card.locked && styles.ideaCardLocked]}>
-                    <Card.Content>
-                      <View style={styles.ideaTopRow}>
-                        <Chip icon="source-branch" style={styles.metaChip}>
-                          {card.sourceSummary}
-                        </Chip>
-                        <Chip
-                          icon={card.locked ? 'lock-outline' : 'sparkles'}
-                          style={[
-                            styles.metaChip,
-                            card.locked ? styles.metaChipLocked : styles.metaChipOpen,
-                          ]}
-                        >
-                          {lockedLabel}
-                        </Chip>
-                      </View>
-
-                      <PaperText variant="titleLarge" style={styles.ideaTitle}>
-                        {card.title}
-                      </PaperText>
-                      <PaperText style={styles.ideaSummary}>{card.summary}</PaperText>
-
-                      <View style={styles.progressHeader}>
-                        <PaperText style={styles.progressLabel}>Confidence</PaperText>
-                        <PaperText style={styles.progressValue}>
-                          {Math.round(card.confidence * 100)}% · {card.confidenceLabel}
-                        </PaperText>
-                      </View>
-                      <ProgressBar
-                        progress={card.confidence}
-                        style={styles.progressBar}
-                        color={card.confidence >= 0.78 ? theme.colors.secondary : theme.colors.primary}
-                      />
-
-                      <View style={styles.keywordWrap}>
-                        {card.keywords.map((keyword) => (
-                          <Chip key={keyword} compact style={styles.keywordChip}>
-                            {keyword}
-                          </Chip>
-                        ))}
-                      </View>
-
-                      <View style={styles.detailGrid}>
-                        <InfoTile label="Notes" value={card.noteCount} />
-                        <InfoTile label="Sources" value={card.uniqueSources} />
-                        <InfoTile label="Match" value={`${Math.round((card.avgMatchScore || 0) * 100)}%`} />
-                      </View>
-
-                      <View style={styles.matchBox}>
-                        <PaperText style={styles.matchLabel}>Closest merge candidate</PaperText>
-                        <PaperText style={styles.matchValue}>{closeMatchLabel}</PaperText>
-                      </View>
-
-                      {card.mentorFeedback ? (
-                        <View style={styles.feedbackBox}>
-                          <PaperText style={styles.matchLabel}>Mentor writeback</PaperText>
-                          <PaperText style={styles.feedbackText}>{card.mentorFeedback}</PaperText>
-                        </View>
-                      ) : null}
-
-                      {card.history.length ? (
-                        <View style={styles.historyBox}>
-                          <PaperText style={styles.matchLabel}>History</PaperText>
-                          {card.history.slice(-2).map((entry) => (
-                            <PaperText key={entry} style={styles.historyText}>
-                              • {entry}
-                            </PaperText>
-                          ))}
-                        </View>
-                      ) : null}
-
-                      <View style={styles.cardActions}>
-                        <Button
-                          mode="contained-tonal"
-                          icon="merge"
-                          onPress={() => handleMergeCard(card.id)}
-                          style={styles.cardActionButton}
-                        >
-                          Merge closest
-                        </Button>
-                        <Button
-                          mode="outlined"
-                          icon="split-vertical"
-                          onPress={() => handleKeepSeparate(card.id)}
-                          style={styles.cardActionButton}
-                        >
-                          Keep separate
-                        </Button>
-                        <Button
-                          mode="text"
-                          icon="account-tie"
-                          onPress={() => beginMentorReview(card.id)}
-                          textColor={theme.colors.secondary}
-                        >
-                          Ask mentor
-                        </Button>
-                      </View>
-                    </Card.Content>
-                  </Card>
-                </Pressable>
-              );
-            })}
-          </View>
-        )}
-      </Surface>
-    </View>
-  );
-
-  const hoopPanel = (
-    <View style={styles.panelStack}>
-      <Surface style={styles.panelCard} elevation={1}>
-        <View style={styles.panelHeader}>
-          <View>
-            <PaperText variant="titleLarge" style={styles.panelTitle}>
-              Hoop review room
-            </PaperText>
-            <PaperText style={styles.panelSubtitle}>
-              A selected idea card can be sent to a human review loop and written back as project memory.
-            </PaperText>
-          </View>
-          <Chip icon={streamConfigured ? 'video-wireless-outline' : 'video-off-outline'} style={styles.helperChip}>
-            {session.bridgeState}
-          </Chip>
-        </View>
-
-        <SegmentedButtons
-          value={reviewMode}
-          onValueChange={setReviewMode}
-          buttons={REVIEW_MODE_OPTIONS}
-          style={styles.segmented}
-        />
-
-        <View style={styles.roleRow}>
-          {ROLE_OPTIONS.map((option) => (
-            <Chip
-              key={option.value}
-              selected={reviewRole === option.value}
-              style={[styles.roleChip, reviewRole === option.value && styles.roleChipSelected]}
-              onPress={() => setReviewRole(option.value)}
-            >
-              {option.label}
-            </Chip>
-          ))}
-        </View>
-
-        {selectedCard ? (
-          <Card style={styles.reviewCard}>
-            <Card.Content>
-              <View style={styles.ideaTopRow}>
-                <Chip icon="shape-outline" style={styles.metaChip}>
-                  {selectedCard.sourceSummary}
-                </Chip>
-                <Chip icon="badge-account-horizontal-outline" style={styles.metaChip}>
-                  {Math.round(selectedCard.confidence * 100)}% confidence
-                </Chip>
-              </View>
-
-              <PaperText variant="titleLarge" style={styles.ideaTitle}>
-                {selectedCard.title}
-              </PaperText>
-              <PaperText style={styles.ideaSummary}>{selectedCard.summary}</PaperText>
-
-              <View style={styles.detailGrid}>
-                <InfoTile label="Selected" value={selectedCard.noteCount} />
-                <InfoTile label="Mode" value={reviewMode} />
-                <InfoTile label="Role" value={titleCase(reviewRole)} />
-              </View>
-
-              <View style={styles.sessionActions}>
-                <Button
-                  mode="contained"
-                  icon="play-circle-outline"
-                  onPress={() => beginMentorReview(selectedCard.id)}
-                  style={styles.cardActionButton}
-                >
-                  Start review
-                </Button>
-                <Button
-                  mode="contained-tonal"
-                  icon="content-save-outline"
-                  onPress={handleWriteback}
-                  disabled={!session.transcript}
-                  style={styles.cardActionButton}
-                >
-                  Write back
-                </Button>
-                <Button
-                  mode="outlined"
-                  icon="share-outline"
-                  onPress={handleShareTranscript}
-                  disabled={!session.transcript}
-                  style={styles.cardActionButton}
-                >
-                  Export transcript
-                </Button>
-              </View>
-            </Card.Content>
-          </Card>
-        ) : (
-          <View style={styles.emptyState}>
-            <PaperText variant="titleMedium" style={styles.emptyTitle}>
-              No card is selected for Hoop yet.
-            </PaperText>
-            <PaperText style={styles.panelSubtitle}>
-              Pick a card in the Dedup board and send it to the review room.
-            </PaperText>
-          </View>
-        )}
-
-        <View style={styles.timelineBox}>
-          <PaperText variant="titleMedium" style={styles.sectionTitle}>
-            Session timeline
-          </PaperText>
-          {session.status === 'requesting' ? (
-            <View style={styles.loadingRow}>
-              <ActivityIndicator size="small" color={theme.colors.primary} />
-              <PaperText style={styles.panelSubtitle}>Connecting to the review room...</PaperText>
-            </View>
-          ) : null}
-          {session.timeline.length ? (
-            session.timeline.map((item) => <TimelineItem key={item.step} item={item} />)
-          ) : (
-            <PaperText style={styles.panelSubtitle}>
-              Start a review to capture the mentoring timeline and writeback note.
-            </PaperText>
-          )}
-        </View>
-
-        <View style={styles.transcriptBox}>
-          <View style={styles.panelHeader}>
-            <View>
-              <PaperText variant="titleMedium" style={styles.sectionTitle}>
-                Transcript and writeback
-              </PaperText>
-              <PaperText style={styles.panelSubtitle}>
-                The transcript is the piece that makes the human loop visible inside the idea artifact.
-              </PaperText>
-            </View>
-            {session.tokenPreview ? (
-              <Chip icon="key-outline" style={styles.helperChip}>
-                {session.tokenPreview}
-              </Chip>
-            ) : null}
-          </View>
-
-          <Surface style={styles.transcriptSurface} elevation={0}>
-            <PaperText style={styles.transcriptText}>
-              {session.transcript || 'No transcript yet. Press Start review to generate one.'}
-            </PaperText>
-          </Surface>
-
-          {session.writeback ? (
-            <View style={styles.writebackBox}>
-              <PaperText style={styles.matchLabel}>Writeback note</PaperText>
-              <PaperText style={styles.feedbackText}>{session.writeback}</PaperText>
-            </View>
-          ) : null}
-
-          <View style={styles.sessionFooter}>
-            <Chip icon="check-decagram-outline" style={styles.helperChip}>
-              {session.recommendation === 'merge' ? 'Merge recommended' : 'Keep separate recommended'}
-            </Chip>
-            <Chip icon="server-security" style={styles.helperChip}>
-              {streamConfigured ? 'Stream bridge armed' : 'Local fallback'}
-            </Chip>
-          </View>
-        </View>
-      </Surface>
-    </View>
-  );
+  const heroDescription = aiConfig.enabled
+    ? `Notlari yapistir, local dedup kartlarini gor ve ${aiConfig.providerLabel} cevabini ayni ekranda al.`
+    : 'Notlari yapistir, local dedup kartlarini gor ve API yoksa yerel cevapla devam et.';
 
   return (
     <PaperProvider theme={theme}>
@@ -829,14 +255,16 @@ function App() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.backdropOne} />
         <View style={styles.backdropTwo} />
+
         <Appbar.Header style={styles.appbar}>
           <Appbar.Content
-            title="Nokta"
-            subtitle="Track C migration + Hoop review"
+            title="Nokta AI"
+            subtitle="Track C note analysis"
             titleStyle={styles.appbarTitle}
             subtitleStyle={styles.appbarSubtitle}
           />
           <Appbar.Action icon="book-open-variant" onPress={handleLoadSample} />
+          <Appbar.Action icon="share-variant" onPress={handleShare} disabled={!analysis} />
           <Appbar.Action icon="refresh" onPress={handleReset} />
         </Appbar.Header>
 
@@ -849,23 +277,534 @@ function App() {
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
           >
-            {activeBoard}
+            <Surface style={styles.heroCard} elevation={1}>
+              <View style={styles.heroHeader}>
+                <View style={styles.heroCopy}>
+                  <PaperText variant="headlineSmall" style={styles.heroTitle}>
+                    Yapistir, analiz et, cevap al.
+                  </PaperText>
+                  <PaperText style={styles.heroSubtitle}>{heroDescription}</PaperText>
+                </View>
+                <Chip
+                  icon={aiConfig.enabled ? 'robot' : 'cloud-off-outline'}
+                  style={styles.heroChip}
+                >
+                  {configLabel}
+                </Chip>
+              </View>
 
-            <SegmentedButtons
-              value={activeView}
-              onValueChange={setActiveView}
-              buttons={VIEW_OPTIONS}
-              style={styles.segmented}
-            />
+              <View style={styles.metricGrid}>
+                <MetricTile
+                  label="Notes"
+                  value={stats.totalNotes}
+                  hint="raw input"
+                  accent="primary"
+                />
+                <MetricTile
+                  label="Cards"
+                  value={analysis?.cards?.length || 0}
+                  hint="dedup output"
+                  accent="secondary"
+                />
+                <MetricTile
+                  label="Confidence"
+                  value={`${Math.round((stats.avgConfidence || 0) * 100)}%`}
+                  hint="board average"
+                  accent="tertiary"
+                />
+                <MetricTile label="Mode" value={modeLabel} hint="analysis source" accent="primary" />
+              </View>
+            </Surface>
 
-            {activeView === 'capture' ? capturePanel : null}
-            {activeView === 'dedup' ? dedupPanel : null}
-            {activeView === 'hoop' ? hoopPanel : null}
+            <Surface style={styles.panelCard} elevation={1}>
+              <View style={styles.panelHeader}>
+                <View>
+                  <PaperText variant="titleLarge" style={styles.panelTitle}>
+                    Capture workspace
+                  </PaperText>
+                  <PaperText style={styles.panelSubtitle}>
+                    Prefixes like `wa:` or `mail:` override the selected source.
+                  </PaperText>
+                </View>
+                <Chip icon="information-outline" style={styles.helperChip}>
+                  Single-screen flow
+                </Chip>
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.sourceRail}
+              >
+                {SOURCE_OPTIONS.map((option) => (
+                  <Chip
+                    key={option.key}
+                    selected={currentSource === option.key}
+                    icon={option.icon}
+                    style={[
+                      styles.sourceChip,
+                      currentSource === option.key && styles.sourceChipSelected,
+                    ]}
+                    onPress={() => setCurrentSource(option.key)}
+                  >
+                    {option.label}
+                  </Chip>
+                ))}
+              </ScrollView>
+
+              <TextInput
+                value={rawText}
+                onChangeText={setRawText}
+                mode="outlined"
+                multiline
+                numberOfLines={10}
+                placeholder="Paste WhatsApp exports, bullet notes, email snippets, or voice note transcriptions..."
+                style={styles.input}
+                outlineStyle={styles.inputOutline}
+                textColor={theme.colors.onSurface}
+                activeOutlineColor={theme.colors.primary}
+              />
+
+              <View style={styles.noteBlock}>
+                <View style={styles.panelHeader}>
+                  <View>
+                    <PaperText variant="titleMedium" style={styles.sectionTitle}>
+                      Ek not kuyruğu
+                    </PaperText>
+                    <PaperText style={styles.panelSubtitle}>
+                      Birden fazla kısa not ekle. Analiz hepsini birlikte işler.
+                    </PaperText>
+                  </View>
+                  <Chip icon="plus-circle-outline" style={styles.helperChip}>
+                    {noteCountLabel}
+                  </Chip>
+                </View>
+
+                <View style={styles.noteComposerRow}>
+                  <TextInput
+                    value={noteDraft}
+                    onChangeText={setNoteDraft}
+                    mode="outlined"
+                    placeholder="Kisa bir ek not yaz..."
+                    style={styles.noteDraftInput}
+                    outlineStyle={styles.inputOutline}
+                    textColor={theme.colors.onSurface}
+                    activeOutlineColor={theme.colors.primary}
+                  />
+                  <Button
+                    mode="contained"
+                    icon="plus"
+                    onPress={handleAddNote}
+                    style={styles.noteAddButton}
+                  >
+                    Add note
+                  </Button>
+                </View>
+
+                {noteItems.length ? (
+                  <View style={styles.noteStack}>
+                    {noteItems.map((note, index) => (
+                      <Surface key={`${index}-${note.slice(0, 12)}`} style={styles.noteCard} elevation={0}>
+                        <View style={styles.noteCardHeader}>
+                          <Chip icon="note-text-outline" style={styles.metaChip}>
+                            Note {index + 1}
+                          </Chip>
+                          <Button
+                            mode="text"
+                            compact
+                            icon="close"
+                            onPress={() => handleRemoveNote(index)}
+                            textColor={theme.colors.onSurfaceVariant}
+                          >
+                            Sil
+                          </Button>
+                        </View>
+                        <PaperText style={styles.noteCardText}>{note}</PaperText>
+                      </Surface>
+                    ))}
+                  </View>
+                ) : (
+                  <PaperText style={styles.panelSubtitle}>
+                    Buraya tek tek not ekleyebilir veya ana kutuya uzun bir blok yapıştırabilirsin.
+                  </PaperText>
+                )}
+              </View>
+
+              <View style={styles.actionRow}>
+                <Button
+                  mode="contained"
+                  icon="auto-fix"
+                  onPress={handleAnalyze}
+                  loading={isAnalyzing}
+                  disabled={isAnalyzing || !composedText.trim()}
+                  style={styles.primaryButton}
+                >
+                  Analyze notes
+                </Button>
+                <Button
+                  mode="outlined"
+                  icon="book-open-variant"
+                  onPress={handleLoadSample}
+                  style={styles.secondaryButton}
+                >
+                  Load sample
+                </Button>
+                <Button
+                  mode="text"
+                  icon="restart"
+                  onPress={handleReset}
+                  textColor={theme.colors.onSurfaceVariant}
+                >
+                  Reset
+                </Button>
+              </View>
+
+              {isAnalyzing ? (
+                <View style={styles.loadingRow}>
+                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                  <PaperText style={styles.loadingText}>Analyzing notes with AI...</PaperText>
+                </View>
+              ) : null}
+            </Surface>
+
+            {analysis ? (
+              <Surface style={styles.panelCard} elevation={1}>
+                <View style={styles.panelHeader}>
+                  <View>
+                    <PaperText variant="titleLarge" style={styles.panelTitle}>
+                      AI answer
+                    </PaperText>
+                    <PaperText style={styles.panelSubtitle}>
+                      The same request returns a short summary, next steps, and per-card reasoning.
+                    </PaperText>
+                  </View>
+                  <Chip
+                    icon={analysis.provider !== 'local' ? 'robot-outline' : 'cloud-off-outline'}
+                    style={styles.helperChip}
+                  >
+                    {modeLabel}
+                  </Chip>
+                </View>
+
+                <PaperText variant="titleLarge" style={styles.answerTitle}>
+                  {analysis.title}
+                </PaperText>
+                <PaperText style={styles.answerSummary}>{analysis.summary}</PaperText>
+
+                <Surface style={styles.answerBubble} elevation={0}>
+                  <PaperText style={styles.answerText}>{analysis.directAnswer}</PaperText>
+                </Surface>
+
+                <View style={styles.sectionBlock}>
+                  <PaperText style={styles.sectionTitle}>Next steps</PaperText>
+                  {analysis.nextSteps.length ? (
+                    analysis.nextSteps.map((step) => (
+                      <PaperText key={step} style={styles.bulletText}>
+                        {'\u2022'} {step}
+                      </PaperText>
+                    ))
+                  ) : (
+                    <PaperText style={styles.panelSubtitle}>No next steps yet.</PaperText>
+                  )}
+                </View>
+
+                <View style={styles.sectionBlock}>
+                  <PaperText style={styles.sectionTitle}>Risk notes</PaperText>
+                  {analysis.riskNotes.length ? (
+                    analysis.riskNotes.map((note) => (
+                      <PaperText key={note} style={styles.bulletText}>
+                        {'\u2022'} {note}
+                      </PaperText>
+                    ))
+                  ) : (
+                    <PaperText style={styles.panelSubtitle}>No risk notes returned.</PaperText>
+                  )}
+                </View>
+
+                <View style={styles.sessionFooter}>
+                  <Chip icon="badge-account-horizontal-outline" style={styles.helperChip}>
+                    {analysis.mentorHint}
+                  </Chip>
+                  {analysis.error ? (
+                    <Chip icon="alert-outline" style={styles.helperChip}>
+                      {analysis.error}
+                    </Chip>
+                  ) : null}
+                </View>
+              </Surface>
+            ) : (
+              <Surface style={styles.panelCard} elevation={1}>
+                <PaperText variant="titleMedium" style={styles.emptyTitle}>
+                  No analysis yet.
+                </PaperText>
+                <PaperText style={styles.panelSubtitle}>
+                  Paste notes and press Analyze notes to get the AI summary and answers.
+                </PaperText>
+              </Surface>
+            )}
+
+            <Surface style={styles.panelCard} elevation={1}>
+              <View style={styles.panelHeader}>
+                <View>
+                  <PaperText variant="titleLarge" style={styles.panelTitle}>
+                    Idea cards
+                  </PaperText>
+                  <PaperText style={styles.panelSubtitle}>
+                    Local clustering keeps source provenance visible before the AI answer lands.
+                  </PaperText>
+                </View>
+                <Chip icon="shape-outline" style={styles.helperChip}>
+                  {analysis?.cards?.length ? `${analysis.cards.length} cards` : 'No cards yet'}
+                </Chip>
+              </View>
+
+              {!analysis?.cards?.length ? (
+                <View style={styles.emptyState}>
+                  <PaperText variant="titleMedium" style={styles.emptyTitle}>
+                    Nothing has been clustered yet.
+                  </PaperText>
+                  <PaperText style={styles.panelSubtitle}>
+                    Use the sample notes or paste your own text, then run Analyze notes.
+                  </PaperText>
+                </View>
+              ) : (
+                <View style={styles.cardStack}>
+                  {analysis.cards.map((card) => {
+                    const isActive = card.id === selectedCard?.id;
+                    const recommendationLabel =
+                      card.aiRecommendation === 'merge'
+                        ? 'Merge'
+                        : card.aiRecommendation === 'keep-separate'
+                        ? 'Keep separate'
+                        : 'Review';
+
+                    return (
+                      <Pressable
+                        key={card.id}
+                        onPress={() => setSelectedCardId(card.id)}
+                        style={({ pressed }) => [
+                          styles.ideaPressable,
+                          pressed && styles.ideaPressablePressed,
+                        ]}
+                      >
+                        <Card
+                          style={[
+                            styles.ideaCard,
+                            isActive && styles.ideaCardActive,
+                          ]}
+                        >
+                          <Card.Content>
+                            <View style={styles.ideaTopRow}>
+                              <Chip icon="source-branch" style={styles.metaChip}>
+                                {card.sourceSummary}
+                              </Chip>
+                              <Chip icon="sparkles" style={styles.metaChip}>
+                                {recommendationLabel}
+                              </Chip>
+                            </View>
+
+                            <PaperText variant="titleLarge" style={styles.ideaTitle}>
+                              {card.title}
+                            </PaperText>
+                            <PaperText style={styles.ideaSummary}>{card.summary}</PaperText>
+
+                            <View style={styles.progressHeader}>
+                              <PaperText style={styles.progressLabel}>Confidence</PaperText>
+                              <PaperText style={styles.progressValue}>
+                                {Math.round(card.confidence * 100)}% - {card.confidenceLabel}
+                              </PaperText>
+                            </View>
+                            <ProgressBar
+                              progress={card.confidence}
+                              style={styles.progressBar}
+                              color={
+                                card.confidence >= 0.78
+                                  ? theme.colors.secondary
+                                  : theme.colors.primary
+                              }
+                            />
+
+                            <View style={styles.keywordWrap}>
+                              {card.keywords.map((keyword) => (
+                                <Chip key={keyword} compact style={styles.keywordChip}>
+                                  {keyword}
+                                </Chip>
+                              ))}
+                            </View>
+
+                            <View style={styles.detailGrid}>
+                              <InfoTile label="Notes" value={card.noteCount} />
+                              <InfoTile label="Sources" value={card.uniqueSources} />
+                              <InfoTile label="Match" value={`${Math.round((card.avgMatchScore || 0) * 100)}%`} />
+                            </View>
+
+                            <View style={styles.matchBox}>
+                              <PaperText style={styles.matchLabel}>AI answer</PaperText>
+                              <PaperText style={styles.feedbackText} numberOfLines={3}>
+                                {card.aiAnswer}
+                              </PaperText>
+                            </View>
+
+                            <View style={styles.matchBox}>
+                              <PaperText style={styles.matchLabel}>AI reason</PaperText>
+                              <PaperText style={styles.historyText}>{card.aiReason}</PaperText>
+                            </View>
+
+                            <View style={styles.matchBox}>
+                              <PaperText style={styles.matchLabel}>Closest merge candidate</PaperText>
+                              <PaperText style={styles.matchValue}>
+                                {card.closeMatch
+                                  ? `${card.closeMatch.title} (${Math.round(card.closeMatch.score * 100)}%)`
+                                  : 'No close match'}
+                              </PaperText>
+                            </View>
+                          </Card.Content>
+                        </Card>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
+            </Surface>
+
+            {selectedCard ? (
+              <Surface style={styles.panelCard} elevation={1}>
+                <View style={styles.panelHeader}>
+                  <View>
+                    <PaperText variant="titleLarge" style={styles.panelTitle}>
+                      Selected card details
+                    </PaperText>
+                    <PaperText style={styles.panelSubtitle}>
+                      Tap a card above to inspect the full AI answer and why it grouped this way.
+                    </PaperText>
+                  </View>
+                  <Chip icon="book-open-variant" style={styles.helperChip}>
+                    {selectedCard.title}
+                  </Chip>
+                </View>
+
+                <PaperText variant="titleLarge" style={styles.answerTitle}>
+                  {selectedCard.title}
+                </PaperText>
+                <PaperText style={styles.answerSummary}>{selectedCard.summary}</PaperText>
+
+                <Surface style={styles.answerBubble} elevation={0}>
+                  <PaperText style={styles.answerText}>{selectedCard.aiAnswer}</PaperText>
+                </Surface>
+
+                <View style={styles.detailGrid}>
+                  <InfoTile label="Decision" value={selectedDecisionLabel} />
+                  <InfoTile label="Confidence" value={`${Math.round(selectedCard.aiConfidence * 100)}%`} />
+                  <InfoTile label="Sources" value={selectedCard.uniqueSources} />
+                </View>
+
+                <View style={styles.matchBox}>
+                  <PaperText style={styles.matchLabel}>Why it grouped here</PaperText>
+                  <PaperText style={styles.feedbackText}>{selectedCard.aiReason}</PaperText>
+                </View>
+
+                <View style={styles.keywordWrap}>
+                  {selectedCard.provenance.map((entry) => (
+                    <Chip key={entry.source} compact style={styles.keywordChip}>
+                      {entry.source} x{entry.count}
+                    </Chip>
+                  ))}
+                </View>
+              </Surface>
+            ) : null}
+
+            <Surface style={styles.panelCard} elevation={1}>
+              <View style={styles.panelHeader}>
+                <View>
+                  <PaperText variant="titleLarge" style={styles.panelTitle}>
+                    AI sohbeti
+                  </PaperText>
+                  <PaperText style={styles.panelSubtitle}>
+                    Notların hakkında soru sor, AI cevapları aynı ekranda alt alta biriktirsin.
+                  </PaperText>
+                </View>
+                <Chip icon="chat-processing-outline" style={styles.helperChip}>
+                  {chatMessages.length ? `${chatMessages.length} mesaj` : 'Hazır'}
+                </Chip>
+              </View>
+
+              {chatMessages.length ? (
+                <View style={styles.chatStack}>
+                  {chatMessages.map((message, index) => {
+                    const isUser = message.role === 'user';
+                    return (
+                      <View
+                        key={`${message.role}-${index}-${message.content.slice(0, 12)}`}
+                        style={[styles.chatRow, isUser ? styles.chatRowUser : styles.chatRowAssistant]}
+                      >
+                        <Surface
+                          style={[
+                            styles.chatBubble,
+                            isUser ? styles.chatBubbleUser : styles.chatBubbleAssistant,
+                          ]}
+                          elevation={0}
+                        >
+                          <View style={styles.chatBubbleHeader}>
+                            <Chip
+                              compact
+                              icon={isUser ? 'account' : 'robot-outline'}
+                              style={isUser ? styles.userChip : styles.aiChip}
+                            >
+                              {isUser ? 'Sen' : 'Nokta AI'}
+                            </Chip>
+                            {message.meta ? (
+                              <PaperText style={styles.chatMeta}>{message.meta}</PaperText>
+                            ) : null}
+                          </View>
+                          <PaperText style={styles.chatText}>{message.content}</PaperText>
+                        </Surface>
+                      </View>
+                    );
+                  })}
+                </View>
+              ) : (
+                <View style={styles.emptyState}>
+                  <PaperText variant="titleMedium" style={styles.emptyTitle}>
+                    Henüz sohbet yok.
+                  </PaperText>
+                  <PaperText style={styles.panelSubtitle}>
+                    Birden fazla not ekledikten sonra bir soru yaz ve AI ile konuşmaya başla.
+                  </PaperText>
+                </View>
+              )}
+
+              <View style={styles.chatComposerRow}>
+                <TextInput
+                  value={chatInput}
+                  onChangeText={setChatInput}
+                  mode="outlined"
+                  multiline
+                  numberOfLines={3}
+                  placeholder="Notlar hakkında soru sor..."
+                  style={styles.chatInput}
+                  outlineStyle={styles.inputOutline}
+                  textColor={theme.colors.onSurface}
+                  activeOutlineColor={theme.colors.primary}
+                />
+                <Button
+                  mode="contained"
+                  icon="send"
+                  onPress={handleSendChat}
+                  loading={isChatting}
+                  disabled={isChatting || !chatInput.trim()}
+                  style={styles.chatSendButton}
+                >
+                  Gönder
+                </Button>
+              </View>
+            </Surface>
 
             <Surface style={styles.footerCard} elevation={0}>
               <PaperText style={styles.footerText}>
-                Expo-ready local demo. If the Stream env vars are available, the review room uses a token-server handshake;
-                otherwise it falls back to a deterministic rehearsal session so the app stays runnable.
+                Set `EXPO_PUBLIC_OPENROUTER_API_KEY` and optionally
+                `EXPO_PUBLIC_OPENROUTER_MODEL=openai/gpt-4o-mini` in `app/.env`. If you only have the
+                legacy OpenAI vars, the app still accepts them, and if no key is present it falls back
+                to local clustering and answers.
               </PaperText>
             </Surface>
           </ScrollView>
@@ -896,32 +835,11 @@ function MetricTile({ label, value, hint, accent }) {
   );
 }
 
-function StoryCard({ title, description }) {
-  return (
-    <Surface style={styles.storyCard} elevation={0}>
-      <PaperText style={styles.storyTitle}>{title}</PaperText>
-      <PaperText style={styles.storyDescription}>{description}</PaperText>
-    </Surface>
-  );
-}
-
 function InfoTile({ label, value }) {
   return (
     <Surface style={styles.infoTile} elevation={0}>
       <PaperText style={styles.infoLabel}>{label}</PaperText>
       <PaperText style={styles.infoValue}>{value}</PaperText>
-    </Surface>
-  );
-}
-
-function TimelineItem({ item }) {
-  return (
-    <Surface style={styles.timelineItem} elevation={0}>
-      <View style={styles.timelineDot} />
-      <View style={styles.timelineCopy}>
-        <PaperText style={styles.timelineStep}>{item.step}</PaperText>
-        <PaperText style={styles.timelineDetail}>{item.detail}</PaperText>
-      </View>
     </Surface>
   );
 }
@@ -998,7 +916,6 @@ const styles = StyleSheet.create({
   heroChip: {
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(34, 199, 162, 0.12)',
-    borderColor: 'rgba(34, 199, 162, 0.25)',
   },
   metricGrid: {
     marginTop: 16,
@@ -1007,21 +924,23 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   metricTile: {
-    flexGrow: 1,
-    flexBasis: '47%',
-    borderRadius: 20,
+    borderRadius: 18,
     padding: 14,
+    minWidth: '47%',
+    flexGrow: 1,
+    backgroundColor: theme.colors.surface,
+  },
+  metricTilePrimary: {
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(124, 92, 255, 0.22)',
   },
-  metricTileprimary: {
-    backgroundColor: 'rgba(124, 92, 255, 0.10)',
+  metricTileSecondary: {
+    borderWidth: 1,
+    borderColor: 'rgba(34, 199, 162, 0.22)',
   },
-  metricTilesecondary: {
-    backgroundColor: 'rgba(34, 199, 162, 0.10)',
-  },
-  metricTiletertiary: {
-    backgroundColor: 'rgba(255, 184, 77, 0.10)',
+  metricTileTertiary: {
+    borderWidth: 1,
+    borderColor: 'rgba(255, 184, 77, 0.22)',
   },
   metricLabel: {
     color: theme.colors.onSurfaceVariant,
@@ -1031,34 +950,26 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     color: theme.colors.onSurface,
-    marginTop: 6,
     fontWeight: '800',
+    marginTop: 6,
   },
   metricHint: {
     color: theme.colors.onSurfaceVariant,
-    marginTop: 4,
-  },
-  segmented: {
-    backgroundColor: 'rgba(16, 25, 44, 0.94)',
-    padding: 6,
-    borderRadius: 20,
-  },
-  panelStack: {
-    gap: 16,
+    marginTop: 2,
   },
   panelCard: {
-    borderRadius: 28,
+    borderRadius: 24,
     padding: 18,
     backgroundColor: 'rgba(16, 25, 44, 0.94)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
+    gap: 14,
   },
   panelHeader: {
     flexDirection: 'row',
+    gap: 12,
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 14,
   },
   panelTitle: {
     color: theme.colors.onSurface,
@@ -1069,113 +980,166 @@ const styles = StyleSheet.create({
     marginTop: 6,
     lineHeight: 20,
   },
+  noteBlock: {
+    gap: 12,
+  },
+  noteComposerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  noteDraftInput: {
+    flex: 1,
+    backgroundColor: 'rgba(8, 13, 23, 0.7)',
+  },
+  noteAddButton: {
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  noteStack: {
+    gap: 10,
+  },
+  noteCard: {
+    borderRadius: 18,
+    padding: 14,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+    gap: 10,
+  },
+  noteCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  noteCardText: {
+    color: theme.colors.onSurface,
+    lineHeight: 20,
+  },
   helperChip: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(124, 92, 255, 0.12)',
   },
   sourceRail: {
     gap: 10,
-    paddingBottom: 12,
+    paddingBottom: 6,
   },
   sourceChip: {
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
   sourceChipSelected: {
-    backgroundColor: 'rgba(124, 92, 255, 0.18)',
-    borderColor: 'rgba(124, 92, 255, 0.4)',
+    backgroundColor: 'rgba(124, 92, 255, 0.24)',
   },
   input: {
-    backgroundColor: 'rgba(7, 16, 29, 0.75)',
+    backgroundColor: 'rgba(8, 13, 23, 0.7)',
   },
   inputOutline: {
-    borderRadius: 20,
     borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16,
   },
   actionRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    marginTop: 14,
     alignItems: 'center',
   },
   primaryButton: {
-    borderRadius: 16,
+    minWidth: 150,
   },
   secondaryButton: {
-    borderRadius: 16,
+    minWidth: 120,
   },
-  storyRow: {
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
+    paddingTop: 4,
   },
-  storyCard: {
-    borderRadius: 20,
-    padding: 14,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  storyTitle: {
-    color: theme.colors.onSurface,
-    fontWeight: '700',
-  },
-  storyDescription: {
+  loadingText: {
     color: theme.colors.onSurfaceVariant,
-    marginTop: 6,
+  },
+  answerTitle: {
+    color: theme.colors.onSurface,
+    fontWeight: '800',
+  },
+  answerSummary: {
+    color: theme.colors.onSurfaceVariant,
     lineHeight: 20,
   },
+  answerBubble: {
+    borderRadius: 18,
+    backgroundColor: 'rgba(124, 92, 255, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(124, 92, 255, 0.18)',
+    padding: 14,
+  },
+  answerText: {
+    color: theme.colors.onSurface,
+    lineHeight: 21,
+  },
+  sectionBlock: {
+    gap: 6,
+  },
+  sectionTitle: {
+    color: theme.colors.onSurface,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  bulletText: {
+    color: theme.colors.onSurfaceVariant,
+    lineHeight: 20,
+  },
+  sessionFooter: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
   emptyState: {
-    paddingVertical: 24,
-    alignItems: 'center',
+    borderRadius: 18,
+    padding: 20,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    alignItems: 'flex-start',
     gap: 8,
   },
   emptyTitle: {
     color: theme.colors.onSurface,
     fontWeight: '700',
-    textAlign: 'center',
   },
   cardStack: {
-    gap: 14,
+    gap: 12,
   },
   ideaPressable: {
-    borderRadius: 24,
+    borderRadius: 20,
   },
   ideaPressablePressed: {
-    opacity: 0.95,
-    transform: [{ scale: 0.995 }],
+    opacity: 0.9,
   },
   ideaCard: {
-    borderRadius: 24,
-    backgroundColor: 'rgba(7, 16, 29, 0.8)',
+    borderRadius: 20,
+    backgroundColor: 'rgba(8, 13, 23, 0.9)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
   },
   ideaCardActive: {
-    borderColor: 'rgba(124, 92, 255, 0.45)',
-    backgroundColor: 'rgba(124, 92, 255, 0.08)',
-  },
-  ideaCardLocked: {
-    borderColor: 'rgba(255, 184, 77, 0.28)',
+    borderColor: 'rgba(124, 92, 255, 0.6)',
+    shadowColor: '#7c5cff',
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
   },
   ideaTopRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
     flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
   },
   metaChip: {
     backgroundColor: 'rgba(255,255,255,0.04)',
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  metaChipLocked: {
-    backgroundColor: 'rgba(255, 184, 77, 0.10)',
-  },
-  metaChipOpen: {
-    backgroundColor: 'rgba(34, 199, 162, 0.10)',
   },
   ideaTitle: {
     color: theme.colors.onSurface,
-    marginTop: 12,
     fontWeight: '800',
   },
   ideaSummary: {
@@ -1186,226 +1150,155 @@ const styles = StyleSheet.create({
   progressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 14,
+    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 8,
   },
   progressLabel: {
     color: theme.colors.onSurfaceVariant,
     fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
   progressValue: {
-    color: theme.colors.onSurface,
+    color: theme.colors.onSurfaceVariant,
     fontSize: 12,
-    fontWeight: '700',
   },
   progressBar: {
-    marginTop: 8,
-    height: 8,
+    height: 6,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   keywordWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginTop: 14,
+    marginTop: 12,
   },
   keywordChip: {
-    backgroundColor: 'rgba(124, 92, 255, 0.10)',
+    backgroundColor: 'rgba(34, 199, 162, 0.12)',
   },
   detailGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 16,
+    gap: 8,
+    marginTop: 10,
   },
   infoTile: {
+    minWidth: '31%',
     flexGrow: 1,
-    flexBasis: '31%',
-    borderRadius: 18,
-    padding: 12,
+    borderRadius: 14,
+    padding: 10,
     backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
   },
   infoLabel: {
     color: theme.colors.onSurfaceVariant,
     fontSize: 11,
     textTransform: 'uppercase',
-    letterSpacing: 0.7,
+    letterSpacing: 0.6,
   },
   infoValue: {
     color: theme.colors.onSurface,
-    marginTop: 6,
+    marginTop: 4,
     fontWeight: '700',
   },
   matchBox: {
-    marginTop: 14,
-    padding: 12,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  feedbackBox: {
     marginTop: 12,
     padding: 12,
-    borderRadius: 18,
-    backgroundColor: 'rgba(34, 199, 162, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(34, 199, 162, 0.18)',
-  },
-  historyBox: {
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 18,
+    borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
   },
   matchLabel: {
     color: theme.colors.onSurfaceVariant,
     fontSize: 12,
     textTransform: 'uppercase',
-    letterSpacing: 0.7,
+    letterSpacing: 0.6,
+    marginBottom: 6,
   },
   matchValue: {
     color: theme.colors.onSurface,
-    marginTop: 6,
-    lineHeight: 20,
+    lineHeight: 19,
   },
   feedbackText: {
     color: theme.colors.onSurface,
-    marginTop: 8,
-    lineHeight: 20,
+    lineHeight: 19,
   },
   historyText: {
     color: theme.colors.onSurfaceVariant,
-    marginTop: 4,
-    lineHeight: 18,
-  },
-  cardActions: {
-    marginTop: 16,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    alignItems: 'center',
-  },
-  cardActionButton: {
-    borderRadius: 16,
-  },
-  roleRow: {
-    flexDirection: 'row',
-    gap: 10,
-    flexWrap: 'wrap',
-    marginBottom: 14,
-  },
-  roleChip: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-  },
-  roleChipSelected: {
-    backgroundColor: 'rgba(124, 92, 255, 0.18)',
-    borderColor: 'rgba(124, 92, 255, 0.4)',
-  },
-  reviewCard: {
-    borderRadius: 24,
-    backgroundColor: 'rgba(7, 16, 29, 0.8)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  sessionActions: {
-    marginTop: 16,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    alignItems: 'center',
-  },
-  timelineBox: {
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  sectionTitle: {
-    color: theme.colors.onSurface,
-    fontWeight: '700',
-  },
-  loadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 10,
-    marginBottom: 8,
-  },
-  timelineItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    paddingVertical: 10,
-    backgroundColor: 'transparent',
-  },
-  timelineDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginTop: 5,
-    backgroundColor: theme.colors.secondary,
-  },
-  timelineCopy: {
-    flex: 1,
-  },
-  timelineStep: {
-    color: theme.colors.onSurface,
-    fontWeight: '700',
-  },
-  timelineDetail: {
-    color: theme.colors.onSurfaceVariant,
-    marginTop: 2,
-    lineHeight: 18,
-  },
-  transcriptBox: {
-    marginTop: 16,
-  },
-  transcriptSurface: {
-    marginTop: 12,
-    borderRadius: 20,
-    padding: 16,
-    backgroundColor: 'rgba(7, 16, 29, 0.85)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  transcriptText: {
-    color: theme.colors.onSurface,
-    lineHeight: 20,
-  },
-  writebackBox: {
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 18,
-    backgroundColor: 'rgba(124, 92, 255, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(124, 92, 255, 0.18)',
-  },
-  sessionFooter: {
-    marginTop: 12,
-    flexDirection: 'row',
-    gap: 10,
-    flexWrap: 'wrap',
+    lineHeight: 19,
   },
   footerCard: {
-    borderRadius: 22,
-    padding: 14,
+    borderRadius: 20,
+    padding: 16,
     backgroundColor: 'rgba(255,255,255,0.03)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(255,255,255,0.04)',
   },
   footerText: {
     color: theme.colors.onSurfaceVariant,
-    lineHeight: 19,
+    lineHeight: 20,
+  },
+  chatStack: {
+    gap: 10,
+  },
+  chatRow: {
+    flexDirection: 'row',
+  },
+  chatRowUser: {
+    justifyContent: 'flex-end',
+  },
+  chatRowAssistant: {
+    justifyContent: 'flex-start',
+  },
+  chatBubble: {
+    maxWidth: '92%',
+    borderRadius: 18,
+    padding: 14,
+    gap: 8,
+  },
+  chatBubbleUser: {
+    backgroundColor: 'rgba(124, 92, 255, 0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(124, 92, 255, 0.24)',
+  },
+  chatBubbleAssistant: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  chatBubbleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  userChip: {
+    backgroundColor: 'rgba(124, 92, 255, 0.22)',
+  },
+  aiChip: {
+    backgroundColor: 'rgba(34, 199, 162, 0.14)',
+  },
+  chatMeta: {
+    color: theme.colors.onSurfaceVariant,
+    fontSize: 11,
+  },
+  chatText: {
+    color: theme.colors.onSurface,
+    lineHeight: 20,
+  },
+  chatComposerRow: {
+    gap: 10,
+    marginTop: 12,
+  },
+  chatInput: {
+    backgroundColor: 'rgba(8, 13, 23, 0.7)',
+  },
+  chatSendButton: {
+    alignSelf: 'flex-start',
   },
   snackbar: {
-    backgroundColor: '#121a2d',
+    backgroundColor: theme.colors.surfaceVariant,
   },
 });
 
