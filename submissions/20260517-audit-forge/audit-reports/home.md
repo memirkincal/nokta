@@ -3,6 +3,7 @@
 - Screen: Home
 - Symptom: The primary CTA and the floating audit button compete for the same lower-right safe-area space.
 - Note: Reserve a dedicated lane before the widget lands.
+- Screenshot asset: assets/home-burnin.svg
 
 ## Observation
 

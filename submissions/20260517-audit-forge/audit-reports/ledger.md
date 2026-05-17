@@ -3,6 +3,7 @@
 - Screen: Ledger
 - Symptom: The forge story needs a visible ratchet line so rollback does not look like random churn.
 - Note: Keep the successful kg values monotonic.
+- Screenshot asset: assets/ledger-burnin.svg
 
 ## Observation
 

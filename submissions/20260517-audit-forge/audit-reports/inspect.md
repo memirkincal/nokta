@@ -3,6 +3,7 @@
 - Screen: Inspect
 - Symptom: The evidence rail compresses too hard and the route starts to feel noisy.
 - Note: Keep one strong card in focus.
+- Screenshot asset: assets/inspect-burnin.svg
 
 ## Observation
 
