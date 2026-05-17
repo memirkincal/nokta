@@ -41,6 +41,16 @@ export default function LedgerScreen() {
           </View>
         ))}
       </View>
+
+      <View style={styles.rollbackCard}>
+        <View style={styles.summaryTop}>
+          <Ionicons name="alert-circle-outline" size={18} color={theme.danger} />
+          <Text style={styles.rollbackLabel}>Rollback is part of the trace</Text>
+        </View>
+        <Text style={styles.summaryText}>
+          The temporary bad commit was reverted on purpose. That keeps the ratchet honest while still showing the failed hypothesis.
+        </Text>
+      </View>
     </ScreenShell>
   );
 }
@@ -74,6 +84,22 @@ const styles = StyleSheet.create({
   },
   tape: {
     gap: 12,
+  },
+  rollbackCard: {
+    marginTop: 14,
+    backgroundColor: 'rgba(255,111,145,0.10)',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,111,145,0.30)',
+    padding: 18,
+    gap: 10,
+  },
+  rollbackLabel: {
+    color: theme.danger,
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
   },
   cycleCard: {
     backgroundColor: 'rgba(255,255,255,0.04)',
