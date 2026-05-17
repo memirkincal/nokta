@@ -6,7 +6,7 @@ Minimal Expo + TypeScript host app for the drop-in audit widget. The goal is to 
 
 - Expo QR / link: https://expo.dev/accounts/codex/projects/nokta-forge
 - 60 sec demo video: https://youtu.be/nokta-forge-demo
-- Submission folder: `submissions/20260517-audit-forge/`
+- Submission folder: `submissions/231118055-audit-forge/`
 - Human touch points: 4
 
 ## Decision Log
