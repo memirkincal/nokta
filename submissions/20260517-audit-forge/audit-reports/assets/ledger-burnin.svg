@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="2200" viewBox="0 0 1200 2200">
+  <defs>
+    <linearGradient id="bg3" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f7f3ea"/>
+      <stop offset="100%" stop-color="#e7eef6"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="2200" fill="url(#bg3)"/>
+  <rect x="180" y="110" rx="56" ry="56" width="840" height="1980" fill="#0b1020" opacity="0.96"/>
+  <rect x="208" y="154" width="160" height="22" rx="11" fill="#ffbf5f" opacity="0.85"/>
+  <text x="208" y="250" fill="#f5f7ff" font-family="Inter, Arial, sans-serif" font-size="62" font-weight="800">Ledger</text>
+  <text x="208" y="308" fill="#97a4c0" font-family="Inter, Arial, sans-serif" font-size="30">Ratchet progress should be explicit</text>
+  <rect x="208" y="390" width="680" height="220" rx="34" fill="#141d31" stroke="#ffffff" stroke-opacity="0.14" stroke-width="4"/>
+  <text x="246" y="472" fill="#ffbf5f" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800">Forge loop</text>
+  <text x="246" y="530" fill="#f5f7ff" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="800">The ledger keeps the human touch points auditable.</text>
+  <rect x="208" y="690" width="680" height="260" rx="34" fill="#1c2740" stroke="#63d0ff" stroke-width="8"/>
+  <text x="248" y="766" fill="#63d0ff" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="800">01 READ</text>
+  <text x="248" y="820" fill="#f5f7ff" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="800">Read the burn-in report first.</text>
+  <text x="248" y="878" fill="#97a4c0" font-family="Inter, Arial, sans-serif" font-size="26">This is the grounding step before any fix.</text>
+  <rect x="208" y="1008" width="680" height="170" rx="34" fill="#141d31" stroke="#ffffff" stroke-opacity="0.14" stroke-width="4"/>
+  <text x="248" y="1088" fill="#ffbf5f" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="800">02 LOCATE</text>
+  <text x="248" y="1138" fill="#f5f7ff" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800">Find the smallest file set.</text>
+  <rect x="208" y="1210" width="680" height="170" rx="34" fill="#141d31" stroke="#ffffff" stroke-opacity="0.14" stroke-width="4"/>
+  <text x="248" y="1290" fill="#ffbf5f" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="800">03 HYPOTHESIZE</text>
+  <text x="248" y="1340" fill="#f5f7ff" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800">Write one repair idea.</text>
+  <rect x="232" y="692" width="628" height="252" rx="30" fill="none" stroke="#ffbf5f" stroke-width="10"/>
+  <text x="248" y="1490" fill="#ffbf5f" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="800">yellow box = ratchet evidence</text>
+</svg>
