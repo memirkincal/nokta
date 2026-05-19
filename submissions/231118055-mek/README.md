@@ -42,7 +42,6 @@ Track A fits the work best because the goal here is to prove the widget is a tru
 3. I kept storage local so the widget can function without a backend or a remote service.
 4. I used SVG burn-in screenshots for the reports so the evidence stays versionable and easy to inspect.
 5. The host app uses a dark, high-contrast surface so the audit overlay and the screenshots read clearly.
-6. Temporary hypothesis for the rollback test: keep a sibling-path mount in the app.
 
 ## Self-check
 
@@ -53,3 +52,4 @@ Track A fits the work best because the goal here is to prove the widget is a tru
 - [ ] Forge ledger finished
 - [ ] APK exported
 - [ ] Public Expo link / demo video link added
+
