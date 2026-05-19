@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Nokta Mek",
+    "slug": "231118055-mek",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#081120"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nokta.mek231118055"
+    },
+    "android": {
+      "package": "com.nokta.mek231118055",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#081120"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
