@@ -3,6 +3,7 @@
     "name": "Nokta Mek",
     "slug": "231118055-mek",
     "version": "1.0.0",
+    "platforms": ["android", "ios", "web"],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
