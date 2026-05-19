@@ -49,7 +49,6 @@ Track A fits the work best because the goal here is to prove the widget is a tru
 - [x] Expo host app exists under `app/`
 - [x] Widget is mounted as a drop-in primitive
 - [x] Three audit reports exist
-- [ ] Forge ledger finished
-- [ ] APK exported
+- [x] Forge ledger finished
+- [x] APK exported
 - [ ] Public Expo link / demo video link added
-
