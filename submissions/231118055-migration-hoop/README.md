@@ -1,85 +1,66 @@
-# Nokta AI Notes Submission
+Track: Voice Viz + Avatar Personas
 
-**Student No:** 231118055  
-**Track:** C - Migration & Dedup  
-**Slug:** migration-hoop
+# 231118055 - Nokta Nokta Final Week
 
 ## What this submission does
 
-This submission keeps the Track C clustering slice, then adds an OpenRouter-backed answer layer and a live AI chat panel on the same screen.
+This final-week slice closes the loop between voice, face, forge, and human bridge:
 
-- Paste rough notes from WhatsApp, Notion, voice transcriptions, or email snippets.
-- Add extra notes one by one instead of relying on a single paste block.
-- Cluster similar notes into idea cards with provenance and confidence.
-- Ask OpenRouter to summarize the grouped notes and answer the implied question.
-- Keep chatting with AI below the analysis panel so follow-up questions stay in context.
-- Keep the app runnable even when the API key is missing by falling back to local analysis.
+- Microphone input is captured with `expo-av`.
+- Voice level drives the waveform bars and the avatar mouth motion.
+- The avatar is loaded from `avatar.glb` and switches persona tone between junior and senior modes.
+- Audio transcript flows back into the analysis board and the chat helper.
+- Forge cycles are visible on-screen, and two consecutive rollbacks automatically open the expert bridge.
+- `AuditWidget` generates burn-in markdown reports from dictated runs and feeds them back into the forge loop.
 
-## Environment
+## Expo link / QR
 
-Create `app/.env` with these variables:
+`PENDING_LOCAL_BUILD`
 
-```env
-EXPO_PUBLIC_OPENROUTER_API_KEY=your_api_key_here
-EXPO_PUBLIC_OPENROUTER_MODEL=openai/gpt-4o-mini
-EXPO_PUBLIC_OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-# Optional attribution
-# EXPO_PUBLIC_OPENROUTER_SITE_URL=https://example.com
-# EXPO_PUBLIC_OPENROUTER_APP_TITLE=Nokta AI v4
-```
+## Demo video
 
-## Expo and demo links
+`PENDING_RECORDING`
 
-- **Expo QR / link:** https://expo.dev/accounts/local-demo/projects/nokta-migration-hoop-231118055
-- **60 sec demo video:** https://youtu.be/nokta-migration-hoop-demo-231118055
-- **APK:** [app-release-v4.apk](./app-release-v4.apk)
+## APK
 
-## Screenshots
+- `app-release.apk`
 
-These emulator shots show the final flow inside the app:
+## Included files
 
-1. Capture workspace with local fallback state
-2. Empty idea cards and empty chat state
-3. Active AI chat with a follow-up question
-
-<p align="center">
-  <img src="./screenshots/capture-home.png" alt="Nokta AI capture workspace" width="320" />
-</p>
-
-<p align="center">
-  <img src="./screenshots/capture-empty-chat.png" alt="Nokta AI empty cards and chat state" width="320" />
-</p>
-
-<p align="center">
-  <img src="./screenshots/capture-chat-active.png" alt="Nokta AI active chat state" width="320" />
-</p>
-
-## How to run
-
-1. `cd app`
-2. `npm install`
-3. `npx expo start`
+- `app/` - final Expo app
+- `avatar.glb` - custom low-poly avatar asset
+- `PERSONAS.md` - the two speaking personas
+- `BRIDGE.md` - bridge call summary and protocol
+- `FORGE.md` - ratchet ledger
+- `audit-reports/` - three burn-in markdown reports
 
 ## Decision log
 
-1. **Track choice:** Track C fits note migration, clustering, and idea card creation better than the other tracks.
-2. **Single-screen original layer:** The app keeps provenance tags, confidence rails, and selected-card detail visible in one flow instead of splitting into extra screens.
-3. **Multi-note input:** A separate quick-add queue lets the user drop multiple short notes before running analysis.
-4. **AI integration:** Notes are analyzed through an OpenRouter API call driven by env variables, and the answer is rendered directly in the app.
-5. **Chat follow-up:** The AI can continue the conversation below the analysis card, which makes the demo feel closer to a real assistant.
-6. **Fallback behavior:** If the API key is missing or the request fails, the app falls back to deterministic local analysis so the demo still runs.
-7. **Delivery shape:** The app stays inside the submission folder and keeps the root untouched, as required by the challenge.
-8. **Visual proof:** Emulator screenshots are included in the README so the multi-note and chat flow is visible without opening the APK.
+1. I chose the voice + avatar path because it shows the cleanest end-to-end loop: speak, see the wave, watch the face react, then turn the result into a report.
+2. I kept two personas, `Junior-Sen` and `Senior-Sen`, because the demo is stronger when the avatar tone visibly changes without changing the product shape.
+3. I used `expo-av` metering so the waveform and mouth motion stay tied to the same signal instead of being two unrelated animations.
+4. I kept the bridge outside the main analysis path so normal demos remain fast, but the app can still open a human call the moment forge gets stuck twice.
+5. `AuditWidget` stays available as a floating action so dictated reports can be saved without leaving the screen.
+6. The app still falls back gracefully if AI configuration is missing, which keeps the demo usable in a classroom build.
+7. I kept everything inside this submission folder so the repo root stays untouched.
 
-## Checklist
+## Human touch points
 
-- Track choice is explicit
-- Expo link is present
-- Demo video link is present
-- APK file exists
-- Screenshots are included
-- Decision log is present
-- Only the submission folder is edited
+1
 
----
-Nokta Track C with AI note analysis.
+## AI tool log
+
+| Area | Tool | Use |
+|---|---|---|
+| Voice | Codex | expo-av + speech recognition wiring |
+| Avatar | Codex | GLB asset, persona switch, lipsync shell |
+| Forge | Codex | cycle ledger, stuck heuristic, bridge trigger |
+| Docs | Codex | README, PERSONAS.md, BRIDGE.md, FORGE.md, reports |
+
+## Run
+
+```bash
+cd app
+npm install
+npx expo start
+```

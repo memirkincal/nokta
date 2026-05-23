@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Nokta AI v4",
-    "slug": "nokta-migration-hoop-231118055",
+    "name": "NOKTA NOKTA",
+    "slug": "nokta-nokta-231118055",
     "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,11 +14,16 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.nokta.migrationhoop231118055"
+      "bundleIdentifier": "com.nokta.noktanokta231118055",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Nokta Nokta sesini yakalamak için mikrofon gerekir.",
+        "NSSpeechRecognitionUsageDescription": "Nokta Nokta konuşmayı metne çevirmek için ses tanımayı kullanır."
+      }
     },
     "android": {
-      "package": "com.nokta.migrationhoop231118055",
+      "package": "com.nokta.noktanokta231118055",
       "versionCode": 4,
+      "permissions": ["RECORD_AUDIO", "INTERNET"],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#121212"
@@ -28,6 +33,7 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "plugins": ["expo-speech-recognition"],
     "extra": {
       "eas": {
         "projectId": "8bfbfbbe-9a47-4623-a697-4ca34fa8bff1"

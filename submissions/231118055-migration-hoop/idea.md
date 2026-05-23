@@ -1,43 +1,46 @@
-# Nokta AI Note Analysis
+# Nokta Nokta - Voice, Avatar, Forge
 
 ## Thesis
 
-Rough notes become much more useful when they are clustered into idea cards and then answered by an AI helper on the same screen. This slice turns pasted dots into a compact board, lets the user add extra notes one by one, then keeps a live AI chat running under the analysis panel.
+The most convincing Nokta slice is not another static note board. It is a loop where the user speaks, the waveform reacts immediately, the avatar mouth moves in sync, the app turns the voice into a readable analysis, and the forge ledger decides when a human needs to step in. That loop makes the app feel alive instead of merely AI-powered.
 
 ## Problem
 
-- Notes are scattered across WhatsApp exports, voice transcriptions, email drafts, and quick bullets.
-- Similar ideas are often repeated with slightly different wording.
-- Users usually want a fast answer, not another navigation layer.
-- Review feedback is useful only if it is visible right after clustering.
-- A useful assistant should also be able to keep talking after the first answer lands.
+- Voice input often feels detached from the rest of the interface.
+- Many demos hide the model behind a plain text box, so the user never sees the signal-to-output relationship.
+- When a repair loop keeps failing, the app should not keep guessing forever.
+- A good final-week demo needs face, voice, report, and human bridge in the same flow.
 
 ## Solution
 
-The app follows a short pipeline:
+This final slice keeps the note-analysis brain from the previous weeks, then adds three connected surfaces:
 
-1. Normalize pasted fragments into note objects.
-2. Let the user append extra short notes into a quick-add queue.
-3. Cluster similar notes into idea cards.
-4. Show provenance, confidence, and merge candidates.
-5. Ask OpenRouter to summarize the cluster, answer the user's notes directly, and continue the conversation below the analysis card.
-6. Fall back to deterministic local analysis when the API key is missing.
+1. A live voice meter that uses `expo-av` metering to drive the bars.
+2. A custom avatar loaded from `avatar.glb`, with two personas and a mouth that reacts to speech level.
+3. A forge ledger that accumulates report cycles and automatically opens a human bridge after two consecutive rollbacks.
+
+The app still accepts pasted notes, still runs the AI answer layer, and still generates burn-in audit reports. The difference is that the user can now watch the whole thing happen in one place: voice in, face alive, report out, forge updated, and expert bridge when the loop gets stuck.
 
 ## Why this is different
 
-- Provenance tags keep the source trail visible.
-- Confidence rails make the cluster quality easy to read.
-- The AI answer sits next to the cards instead of hiding behind another screen.
-- A quick-add note queue makes it easier to build a richer board from multiple fragments.
-- The follow-up chat keeps the assistant available after the first analysis, which feels more like a real helper.
-- Local fallback keeps the demo working even when the API is not configured.
+- The waveform is not decorative; it is the same signal that drives the avatar mouth.
+- The avatar is not generic; the app switches between two personas with different tone labels.
+- The forge ledger is not a log dump; it is a ratchet that can trigger a human call.
+- The audit widget is not hidden; dictated reports can be saved from the same screen.
+- The whole flow stays local-first so the demo does not collapse when the API is missing.
+
+## Personas
+
+- `Junior-Sen` - warm, exploratory, more playful.
+- `Senior-Sen` - calm, concise, and decision-oriented.
 
 ## Non-goals
 
-- Full backend syncing
-- A marketplace, social feed, or large multi-screen product
-- Voice capture inside the app itself
+- A production-grade telephony stack
+- A full avatar rigging pipeline editor inside the app
+- A backend report sync service
+- A social/feed layer
 
 ## Summary
 
-This is a focused Track C slice with a direct AI answer layer and a small chat loop. It keeps the submission small, but still shows a meaningful Nokta direction: capture, dedup, answer, chat, and keep provenance visible.
+This is the final Nokta slice where voice, avatar, forge, and human bridge all touch. It keeps the earlier note analysis layer, but makes the demo feel like one continuous system instead of isolated screens.
