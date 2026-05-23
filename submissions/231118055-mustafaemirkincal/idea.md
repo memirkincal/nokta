@@ -1,52 +1,35 @@
-# NOKTA Idea Cards
+# Nokta Nokta - Consolidated Submission
 
-## Track C - Migration & Dedup
+## Thesis
 
-This submission focuses on the smallest useful slice of NOKTA: take a messy dump of notes, WhatsApp exports, or bullet lists and convert it into clean idea cards.
+This submission keeps the Track C dedup workflow and packages the final-week voice/avatar/forge materials in the same folder, so the whole project is reviewable as one coherent delivery instead of split across multiple folders.
 
 ## Problem
 
-Useful information is usually scattered across repeated messages, half-written thoughts, and duplicated decisions. By the time someone wants to act on it, the original context is already buried in chat noise.
+- Notes arrive as messy dumps, repeated chat lines, and half-finished bullets.
+- A good demo needs a clear API-backed app, but the final-week artifacts also need to live next to it.
+- Reviewers should not have to search across multiple submission folders to find the source, binary, and reports.
 
 ## Solution
 
-The app provides a single paste field and a single analysis action:
+This folder combines:
 
-1. Paste raw notes or a chat export.
-2. Deduplicate repeated lines.
-3. Group related notes into traceable cards.
-4. Surface a short title, summary, tags, score, and source line numbers.
+1. An API-backed Expo app that deduplicates note dumps into idea cards.
+2. A single `app-release.apk` for direct review.
+3. Final-week artifacts for voice, avatar, forge, bridge, and dictated audit reports.
 
-## Card Model
+## Why this works
 
-Each extracted card includes:
+- The app stays useful on its own because it still runs with the Gemini key.
+- The final-week docs sit next to the app, so the voice/avatar layer is documented even if the reviewer only opens one folder.
+- The APK is stored beside the source, which makes the submission easier to verify.
 
-- `title`
-- `summary`
-- `category`
-- `tags`
-- `score`
-- `mergedFrom`
+## Non-goals
 
-The `mergedFrom` field keeps the result auditable so the output can always be traced back to the original dump.
+- Rebuilding the whole project into multiple repo roots.
+- Hiding the API setup in a separate branch or folder.
+- Leaving the final-week assets disconnected from the main submission.
 
-## Category Scheme
+## Summary
 
-The demo uses five categories:
-
-- `idea`
-- `task`
-- `decision`
-- `risk`
-- `other`
-
-This keeps the output focused on common note-dump patterns instead of forcing the user into a narrow template.
-
-## AI Strategy
-
-The app prefers a model-backed extraction path when `EXPO_PUBLIC_GROQ_API_KEY` is available. If no key exists, it falls back to a local dedup pipeline so the demo is still usable in a classroom or offline setup.
-
-## Why this track
-
-Track C is the cleanest fit for the current repository because it demonstrates NOKTA's core thesis: transform fragmented input into a structured artifact with traceability.
-
+The folder is now the canonical Nokta submission for this student number: one app, one APK, one review path.
