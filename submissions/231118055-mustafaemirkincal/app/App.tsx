@@ -4,11 +4,15 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import DumpScreen from './screens/DumpScreen';
 import CardsScreen from './screens/CardsScreen';
+import AvatarScreen from './screens/AvatarScreen';
+import BridgeScreen from './screens/BridgeScreen';
 import { IdeaCard } from './services/claudeApi';
 
 export type RootStackParamList = {
   Dump: undefined;
   Cards: { cards: IdeaCard[] };
+  Avatar: undefined;
+  Bridge: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -24,6 +28,8 @@ export default function App() {
       >
         <Stack.Screen name="Dump" component={DumpScreen} />
         <Stack.Screen name="Cards" component={CardsScreen} />
+        <Stack.Screen name="Avatar" component={AvatarScreen} />
+        <Stack.Screen name="Bridge" component={BridgeScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

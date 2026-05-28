@@ -11,6 +11,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { IdeaCard } from '../services/claudeApi';
 import { RootStackParamList } from '../App';
+import AuditWidget from '../components/AuditWidget';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Cards'>;
@@ -124,6 +125,10 @@ export default function CardsScreen({ navigation, route }: Props) {
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity onPress={() => navigation.navigate('Avatar')} style={styles.backBtn}>
+          <Text style={styles.backText}>Avatar</Text>
+        </TouchableOpacity>
+
         <View style={styles.headerCopy}>
           <Text style={styles.headerTitle}>{cards.length} idea cards</Text>
           <Text style={styles.headerSub}>Deduplicated and grouped from the original dump</Text>
@@ -142,6 +147,12 @@ export default function CardsScreen({ navigation, route }: Props) {
             <Text style={styles.emptyText}>Go back and paste a note dump first.</Text>
           </View>
         }
+      />
+
+      <AuditWidget
+        screenName="Idea Cards"
+        notes={cards.map((card) => `${card.title}: ${card.summary}`).join('\n')}
+        cards={cards}
       />
     </View>
   );

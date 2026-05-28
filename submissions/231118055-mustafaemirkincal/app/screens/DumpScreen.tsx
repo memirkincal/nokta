@@ -14,6 +14,7 @@ import {
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { analyzeNotes, IdeaCard } from '../services/claudeApi';
 import { RootStackParamList } from '../App';
+import AuditWidget from '../components/AuditWidget';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Dump'>;
@@ -86,7 +87,7 @@ export default function DumpScreen({ navigation }: Props) {
         <View style={styles.topBar}>
           <View>
             <Text style={styles.brand}>NOKTA</Text>
-            <Text style={styles.kicker}>Track C, Migration & Dedup</Text>
+            <Text style={styles.kicker}>Idea Input, audit and handoff</Text>
           </View>
           <View style={styles.pill}>
             <Text style={styles.pillText}>{lineCount || '0'} lines</Text>
@@ -157,11 +158,22 @@ export default function DumpScreen({ navigation }: Props) {
           )}
         </TouchableOpacity>
 
+        <View style={styles.linkRow}>
+          <TouchableOpacity style={styles.linkBtn} onPress={() => navigation.navigate('Avatar')}>
+            <Text style={styles.linkText}>Avatar lab</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.linkBtn} onPress={() => navigation.navigate('Bridge')}>
+            <Text style={styles.linkText}>Expert bridge</Text>
+          </TouchableOpacity>
+        </View>
+
         <Text style={styles.footerNote}>
           Local fallback is built in. The APK reads `EXPO_PUBLIC_GEMINI_API_KEY` from build-time
           config, so rebuild after editing `app/.env.local` if you want model-backed extraction.
         </Text>
       </ScrollView>
+
+      <AuditWidget screenName="Idea Input" notes={text} cards={[]} />
     </KeyboardAvoidingView>
   );
 }
@@ -340,6 +352,25 @@ const styles = StyleSheet.create({
     color: '#0b1020',
     fontSize: 16,
     fontWeight: '900',
+  },
+  linkRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  linkBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.2)',
+    borderRadius: 16,
+    paddingVertical: 12,
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+  },
+  linkText: {
+    color: '#e2e8f0',
+    fontWeight: '800',
+    fontSize: 13,
   },
   footerNote: {
     color: '#7c8aa6',
