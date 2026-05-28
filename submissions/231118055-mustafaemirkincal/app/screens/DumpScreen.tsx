@@ -32,6 +32,7 @@ const PLACEHOLDER = `WhatsApp export or rough notes work fine.
 
 export default function DumpScreen({ navigation }: Props) {
   const [text, setText] = useState('');
+  const [extraNote, setExtraNote] = useState('');
   const [loading, setLoading] = useState(false);
   const [lineCount, setLineCount] = useState(0);
 
@@ -42,6 +43,18 @@ export default function DumpScreen({ navigation }: Props) {
       .map(line => line.trim())
       .filter(Boolean);
     setLineCount(lines.length);
+  }
+
+  function appendExtraNote() {
+    const next = extraNote.trim();
+    if (!next) {
+      Alert.alert('Empty note', 'Type a short extra note first.');
+      return;
+    }
+
+    const separator = text.trim() ? '\n' : '';
+    handleChange(`${text}${separator}${next}`);
+    setExtraNote('');
   }
 
   async function handleAnalyze() {
@@ -118,6 +131,20 @@ export default function DumpScreen({ navigation }: Props) {
           textAlignVertical="top"
         />
 
+        <View style={styles.extraNoteBox}>
+          <Text style={styles.sampleTitle}>Add extra note</Text>
+          <TextInput
+            style={styles.extraInput}
+            placeholder="Type one more line and append it to the dump"
+            placeholderTextColor="#7b8095"
+            value={extraNote}
+            onChangeText={setExtraNote}
+          />
+          <TouchableOpacity style={styles.extraBtn} onPress={appendExtraNote}>
+            <Text style={styles.extraBtnText}>Append note</Text>
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleAnalyze}
@@ -131,8 +158,8 @@ export default function DumpScreen({ navigation }: Props) {
         </TouchableOpacity>
 
         <Text style={styles.footerNote}>
-          Local fallback is built in. If `EXPO_PUBLIC_GEMINI_API_KEY` is present, the app uses
-          Gemini for model-backed extraction.
+          Local fallback is built in. The APK reads `EXPO_PUBLIC_GEMINI_API_KEY` from build-time
+          config, so rebuild after editing `app/.env.local` if you want model-backed extraction.
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -256,6 +283,36 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontSize: 13,
     lineHeight: 20,
+  },
+  extraNoteBox: {
+    backgroundColor: 'rgba(8, 15, 33, 0.92)',
+    borderColor: 'rgba(34, 211, 238, 0.16)',
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 16,
+  },
+  extraInput: {
+    backgroundColor: '#0f172a',
+    color: '#f8fafc',
+    borderColor: 'rgba(148, 163, 184, 0.2)',
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 6,
+    marginBottom: 12,
+  },
+  extraBtn: {
+    backgroundColor: '#22d3ee',
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  extraBtnText: {
+    color: '#07111f',
+    fontSize: 13,
+    fontWeight: '900',
   },
   input: {
     backgroundColor: '#0f172a',

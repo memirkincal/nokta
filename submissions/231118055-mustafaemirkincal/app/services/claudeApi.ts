@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import { GEMINI_API_KEY, GEMINI_API_URL } from '../constants/Config';
 
 export interface IdeaCard {
@@ -268,7 +269,7 @@ function extractText(response: any): string {
     .trim();
 }
 
-async function callGemini(rawText: string): Promise<IdeaCard[]> {
+async function callGemini(rawText: string, apiKey: string): Promise<IdeaCard[]> {
   const lines = splitLines(rawText);
   if (lines.length === 0) {
     return [];
@@ -280,7 +281,7 @@ async function callGemini(rawText: string): Promise<IdeaCard[]> {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-goog-api-key': GEMINI_API_KEY,
+      'x-goog-api-key': apiKey,
     },
     body: JSON.stringify({
       systemInstruction: {
@@ -324,14 +325,27 @@ export async function analyzeNotes(rawText: string): Promise<IdeaCard[]> {
     return [];
   }
 
-  if (!GEMINI_API_KEY) {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
     return buildFallbackCards(rawText);
   }
 
   try {
-    return await callGemini(rawText);
+    return await callGemini(rawText, apiKey);
   } catch (error) {
     console.warn('Falling back to local dedup logic:', error);
     return buildFallbackCards(rawText);
   }
+}
+function getGeminiApiKey() {
+  const runtimeKey = (Constants.expoConfig as { extra?: { geminiApiKey?: unknown } } | undefined)?.extra?.geminiApiKey;
+  if (typeof runtimeKey === 'string' && runtimeKey.trim()) {
+    return runtimeKey.trim();
+  }
+
+  if (GEMINI_API_KEY.trim()) {
+    return GEMINI_API_KEY.trim();
+  }
+
+  return '';
 }
