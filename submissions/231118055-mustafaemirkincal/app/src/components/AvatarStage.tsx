@@ -68,7 +68,7 @@ function AvatarMesh({ level, persona, uri }: { level: number; persona: Persona; 
     scene.scale.setScalar(fittedScale);
     scene.position.set(
       -center.x * fittedScale,
-      -center.y * fittedScale + size.y * fittedScale * 0.18,
+      -center.y * fittedScale + size.y * fittedScale * 0.52,
       -center.z * fittedScale,
     );
   }, [scene, persona.accent]);
@@ -135,7 +135,7 @@ export default function AvatarStage({ level, persona }: { level: number; persona
 
       <View style={styles.canvasBox}>
         {uri ? (
-          <Canvas camera={{ position: [0, 0.75, 3.1], fov: 24 }}>
+          <Canvas camera={{ position: [0, 1.72, 2.65], fov: 18 }}>
             <ambientLight intensity={0.95} />
             <directionalLight position={[3, 4, 5]} intensity={1.35} />
             <pointLight position={[-2, -1, 3]} intensity={0.55} color={persona.accent} />
