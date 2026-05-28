@@ -20,38 +20,38 @@ export default function BridgeScreen({ navigation }: Props) {
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.topRow}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Text style={styles.backText}>Back</Text>
+            <Text style={styles.backText}>Geri</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Expert bridge</Text>
+          <Text style={styles.title}>Uzman köprüsü</Text>
         </View>
 
         <View style={styles.hero}>
-          <Text style={styles.heroTitle}>Open this when the loop gets stuck.</Text>
+          <Text style={styles.heroTitle}>Döngü kilitlenince bunu aç.</Text>
           <Text style={styles.heroCopy}>
-            Keep it simple: camera, audio, and screen share through a Jitsi room. When the app cannot
-            solve the case, hand it to a person.
+            Basit tut: kamera, ses ve ekran paylaşımı Jitsi odası üzerinden çalışır. Uygulama
+            sorunu çözemediğinde işi bir insana devret.
           </Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.label}>Room</Text>
+          <Text style={styles.label}>Oda</Text>
           <Text style={styles.url}>{ROOM_URL}</Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.label}>What to say in the demo</Text>
-          <Text style={styles.copy}>1. Show the stuck state.</Text>
-          <Text style={styles.copy}>2. Open the bridge.</Text>
-          <Text style={styles.copy}>3. Share the screen and ask the expert for help.</Text>
-          <Text style={styles.copy}>4. Save the summary back into BRIDGE.md later.</Text>
+          <Text style={styles.label}>Demoda ne gösterileceği</Text>
+          <Text style={styles.copy}>1. Kilitli durumu göster.</Text>
+          <Text style={styles.copy}>2. Köprüyü aç.</Text>
+          <Text style={styles.copy}>3. Ekranı paylaş ve uzmandan yardım iste.</Text>
+          <Text style={styles.copy}>4. Özeti sonra BRIDGE.md içine yaz.</Text>
         </View>
 
         <TouchableOpacity style={styles.primaryBtn} onPress={openRoom}>
-          <Text style={styles.primaryText}>Join Jitsi room</Text>
+          <Text style={styles.primaryText}>Jitsi odasına katıl</Text>
         </TouchableOpacity>
       </ScrollView>
 
-      <AuditWidget screenName="Expert Bridge" notes={ROOM_URL} cards={[]} />
+      <AuditWidget screenName="Uzman Köprüsü" notes={ROOM_URL} cards={[]} />
     </View>
   );
 }

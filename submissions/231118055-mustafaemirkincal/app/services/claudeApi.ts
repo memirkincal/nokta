@@ -18,29 +18,29 @@ type Group = {
   keywords: string[];
 };
 
-const SYSTEM_PROMPT = `You turn messy note dumps into clean idea cards.
+const SYSTEM_PROMPT = `Karışık not dökümlerini temiz fikir kartlarına çevirirsin.
 
-The input may include WhatsApp exports, bullet notes, mixed language fragments, and repeated lines.
-Return only a JSON array. No markdown fences. No prose.
+Girdi WhatsApp dışa aktarımları, madde listeleri, karışık diller ve tekrar eden satırlar içerebilir.
+Sadece bir JSON dizisi döndür. Markdown kod bloğu yok. Ek açıklama yok.
 
-Rules:
-- Merge near-duplicate lines into a single card.
-- Keep the dominant language of each cluster.
-- Use one of these categories: idea, task, decision, risk, other.
-- mergedFrom must contain the original 1-based line numbers that were merged.
-- title must be short, clear, and action-oriented.
-- summary must be 1-2 sentences and preserve meaning without filler.
-- tags must be 2-4 lowercase keywords.
-- score must be 0-100 based on specificity and usefulness.
+Kurallar:
+- Birbirine çok benzeyen satırları tek kartta birleştir.
+- Her kümenin baskın dilini koru.
+- Şu kategorilerden birini kullan: idea, task, decision, risk, other.
+- mergedFrom alanı, birleştirilen orijinal 1 tabanlı satır numaralarını içermeli.
+- title kısa, net ve eylem odaklı olmalı.
+- summary 1-2 cümle olmalı ve anlamı gereksiz süs olmadan korumalı.
+- tags 2-4 küçük harfli anahtar kelime olmalı.
+- score 0-100 arası olmalı; özgüllük ve faydaya göre puanlanmalı.
 
-Output schema:
+Çıktı şeması:
 [
   {
     "id": "card_1",
-    "title": "Short title",
-    "summary": "Clean summary",
+    "title": "Kısa başlık",
+    "summary": "Temiz özet",
     "mergedFrom": [1, 3, 7],
-    "tags": ["keyword", "keyword"],
+    "tags": ["anahtar", "kelime"],
     "score": 82,
     "category": "idea"
   }
@@ -87,6 +87,35 @@ const STOP_WORDS = new Set([
   'an',
   'is',
   'are',
+  'bir',
+  've',
+  'veya',
+  'ile',
+  'için',
+  'ama',
+  'fakat',
+  'çünkü',
+  'şu',
+  'bu',
+  'o',
+  'da',
+  'de',
+  'mi',
+  'mı',
+  'mu',
+  'mü',
+  'gibi',
+  'daha',
+  'çok',
+  'az',
+  'önce',
+  'sonra',
+  'üst',
+  'alt',
+  'kadar',
+  'her',
+  'bazı',
+  'aynı',
 ]);
 
 function splitLines(rawText: string) {
@@ -117,7 +146,7 @@ function pickCategory(line: string, tokens: string[]): IdeaCard['category'] {
   const text = `${line.toLowerCase()} ${tokens.join(' ')}`;
 
   if (
-    /(^|\s)(todo|follow up|followup|deadline|remind|schedule|book|send|assign|plan|review|checklist)(\s|$)/.test(
+    /(^|\s)(todo|follow up|followup|deadline|remind|schedule|book|send|assign|plan|review|checklist|görev|yap|hazırla|gönder|ata|incele|kontrol|takip)(\s|$)/.test(
       text,
     )
   ) {
@@ -125,7 +154,7 @@ function pickCategory(line: string, tokens: string[]): IdeaCard['category'] {
   }
 
   if (
-    /(^|\s)(decide|decision|chosen|approved|use|pick|selected|locked|agreed|final|confirmed)(\s|$)/.test(
+    /(^|\s)(decide|decision|chosen|approved|use|pick|selected|locked|agreed|final|confirmed|karar|seç|onay|sabitle|kilitle)(\s|$)/.test(
       text,
     )
   ) {
@@ -133,7 +162,7 @@ function pickCategory(line: string, tokens: string[]): IdeaCard['category'] {
   }
 
   if (
-    /(^|\s)(risk|blocked|issue|problem|constraint|limit|cannot|can't|need to|warning|dependency|delay)(\s|$)/.test(
+    /(^|\s)(risk|blocked|issue|problem|constraint|limit|cannot|can't|need to|warning|dependency|delay|risk|sorun|problem|engel|kısıt|sınır|bağımlılık|gecikme)(\s|$)/.test(
       text,
     )
   ) {
@@ -141,7 +170,7 @@ function pickCategory(line: string, tokens: string[]): IdeaCard['category'] {
   }
 
   if (
-    /(^|\s)(idea|feature|build|ship|launch|prototype|product|solution|app)(\s|$)/.test(text)
+    /(^|\s)(idea|feature|build|ship|launch|prototype|product|solution|app|fikir|özellik|ürün|çözüm|uygulama|prototip)(\s|$)/.test(text)
   ) {
     return 'idea';
   }
@@ -213,9 +242,7 @@ function buildSummary(group: Group) {
   }
 
   const secondary = group.lines[1].replace(/\s+/g, ' ').trim();
-  return `${primary} Synthesized with ${group.lines.length - 1} related line${
-    group.lines.length - 1 > 1 ? 's' : ''
-  }, including: ${secondary}`;
+  return `${primary} ${group.lines.length - 1} ilgili satırla birleştirildi, örnek: ${secondary}`;
 }
 
 function buildTags(group: Group) {
@@ -292,7 +319,7 @@ async function callGemini(rawText: string, apiKey: string): Promise<IdeaCard[]> 
           role: 'user',
           parts: [
             {
-              text: `Deduplicate and extract idea cards from the following notes. Return only JSON.\n\n${numberedText}`,
+              text: `Aşağıdaki notlardan tekrarları birleştir ve fikir kartları çıkar. Yalnızca JSON döndür.\n\n${numberedText}`,
             },
           ],
         },

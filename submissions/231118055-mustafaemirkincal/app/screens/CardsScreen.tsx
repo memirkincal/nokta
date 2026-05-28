@@ -23,19 +23,19 @@ const CATEGORY_META: Record<
   { label: string; tint: string; badge: string; surface: string }
 > = {
   idea: {
-    label: 'Idea',
+    label: 'Fikir',
     tint: '#f59e0b',
     badge: 'rgba(245, 158, 11, 0.16)',
     surface: 'rgba(245, 158, 11, 0.05)',
   },
   task: {
-    label: 'Task',
+    label: 'Görev',
     tint: '#22d3ee',
     badge: 'rgba(34, 211, 238, 0.16)',
     surface: 'rgba(34, 211, 238, 0.05)',
   },
   decision: {
-    label: 'Decision',
+    label: 'Karar',
     tint: '#a78bfa',
     badge: 'rgba(167, 139, 250, 0.16)',
     surface: 'rgba(167, 139, 250, 0.05)',
@@ -47,7 +47,7 @@ const CATEGORY_META: Record<
     surface: 'rgba(251, 113, 133, 0.05)',
   },
   other: {
-    label: 'Other',
+    label: 'Diğer',
     tint: '#94a3b8',
     badge: 'rgba(148, 163, 184, 0.16)',
     surface: 'rgba(148, 163, 184, 0.05)',
@@ -55,10 +55,10 @@ const CATEGORY_META: Record<
 };
 
 function scoreLabel(score: number) {
-  if (score >= 85) return 'strong';
-  if (score >= 70) return 'good';
-  if (score >= 55) return 'usable';
-  return 'rough';
+  if (score >= 85) return 'güçlü';
+  if (score >= 70) return 'iyi';
+  if (score >= 55) return 'kullanılabilir';
+  return 'ham';
 }
 
 function CardItem({ card }: { card: IdeaCard }) {
@@ -66,7 +66,7 @@ function CardItem({ card }: { card: IdeaCard }) {
 
   async function handleShare() {
     await Share.share({
-      message: `${card.title}\n\n${card.summary}\n\nMerged from lines: ${card.mergedFrom.join(
+        message: `${card.title}\n\n${card.summary}\n\nBirleşen satırlar: ${card.mergedFrom.join(
         ', ',
       )}`,
     });
@@ -80,7 +80,7 @@ function CardItem({ card }: { card: IdeaCard }) {
         </View>
 
         <TouchableOpacity onPress={handleShare} style={styles.shareBtn}>
-          <Text style={styles.shareBtnText}>Share</Text>
+          <Text style={styles.shareBtnText}>Paylaş</Text>
         </TouchableOpacity>
       </View>
 
@@ -89,7 +89,7 @@ function CardItem({ card }: { card: IdeaCard }) {
 
       <View style={styles.scoreRow}>
         <View style={styles.scoreMeta}>
-          <Text style={styles.scoreLabel}>Score</Text>
+          <Text style={styles.scoreLabel}>Puan</Text>
           <Text style={[styles.scoreValue, { color: meta.tint }]}>{card.score}</Text>
         </View>
         <Text style={styles.scoreHint}>{scoreLabel(card.score)}</Text>
@@ -107,7 +107,7 @@ function CardItem({ card }: { card: IdeaCard }) {
         ))}
       </View>
 
-      <Text style={styles.lineInfo}>Merged from lines {card.mergedFrom.join(', ')}</Text>
+      <Text style={styles.lineInfo}>Birleşen satırlar {card.mergedFrom.join(', ')}</Text>
     </View>
   );
 }
@@ -122,16 +122,16 @@ export default function CardsScreen({ navigation, route }: Props) {
 
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>Geri</Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.navigate('Avatar')} style={styles.backBtn}>
-          <Text style={styles.backText}>Avatar</Text>
+          <Text style={styles.backText}>Avatar sahnesi</Text>
         </TouchableOpacity>
 
         <View style={styles.headerCopy}>
-          <Text style={styles.headerTitle}>{cards.length} idea cards</Text>
-          <Text style={styles.headerSub}>Deduplicated and grouped from the original dump</Text>
+          <Text style={styles.headerTitle}>{cards.length} fikir kartı</Text>
+          <Text style={styles.headerSub}>Orijinal dökümden tekilleştirilip gruplandı</Text>
         </View>
       </View>
 
@@ -143,14 +143,14 @@ export default function CardsScreen({ navigation, route }: Props) {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>No cards yet</Text>
-            <Text style={styles.emptyText}>Go back and paste a note dump first.</Text>
+            <Text style={styles.emptyTitle}>Henüz kart yok</Text>
+            <Text style={styles.emptyText}>Geri dönüp önce not dökümünü yapıştır.</Text>
           </View>
         }
       />
 
       <AuditWidget
-        screenName="Idea Cards"
+        screenName="Fikir Kartları"
         notes={cards.map((card) => `${card.title}: ${card.summary}`).join('\n')}
         cards={cards}
       />

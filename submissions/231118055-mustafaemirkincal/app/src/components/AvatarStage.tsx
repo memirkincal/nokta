@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Asset } from 'expo-asset';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Canvas, useFrame, useLoader } from '@react-three/fiber/native';
@@ -25,6 +25,7 @@ function AvatarMesh({ level, persona, uri }: { level: number; persona: Persona; 
   const mouth = useMemo(() => {
     let mouthNode: THREE.Object3D | null = null;
     let jawNode: THREE.Object3D | null = null;
+
     gltf.scene.traverse((object: THREE.Object3D) => {
       const name = String(object.name || '').toLowerCase();
       if (!mouthNode && (name.includes('mouth') || name.includes('lip'))) {
@@ -56,9 +57,10 @@ function AvatarMesh({ level, persona, uri }: { level: number; persona: Persona; 
     }
 
     const t = clock.getElapsedTime();
-    root.rotation.y = Math.sin(t * 0.8) * 0.18;
-    root.rotation.x = Math.sin(t * 0.5) * 0.06 - 0.04;
-    root.position.y = Math.sin(t * 1.1) * 0.03;
+    root.rotation.y = Math.sin(t * 0.8) * 0.15;
+    root.rotation.x = Math.sin(t * 0.5) * 0.04 - 0.03;
+    root.position.y = 0.26 + Math.sin(t * 1.1) * 0.025;
+    root.position.z = -0.05;
 
     if (mouth.mouthNode) {
       mouth.mouthNode.scale.y = 0.8 + level * 1.9;
@@ -100,8 +102,8 @@ export default function AvatarStage({ level, persona }: { level: number; persona
     <View style={styles.wrap}>
       <View style={styles.headerRow}>
         <View>
-          <Text style={styles.title}>Avatar stage</Text>
-          <Text style={styles.subtitle}>GLB loaded from `app/assets/avatar.glb`</Text>
+          <Text style={styles.title}>Avatar sahnesi</Text>
+          <Text style={styles.subtitle}>GLB, `app/assets/avatar.glb` içinden yüklenir</Text>
         </View>
         <View style={[styles.tag, { backgroundColor: persona.backdrop }]}>
           <Text style={[styles.tagText, { color: persona.accent }]}>{persona.label}</Text>
@@ -110,7 +112,7 @@ export default function AvatarStage({ level, persona }: { level: number; persona
 
       <View style={styles.canvasBox}>
         {uri ? (
-          <Canvas camera={{ position: [0, 0.1, 4.2], fov: 36 }}>
+          <Canvas camera={{ position: [0, 0.65, 2.8], fov: 28 }}>
             <ambientLight intensity={0.95} />
             <directionalLight position={[3, 4, 5]} intensity={1.35} />
             <pointLight position={[-2, -1, 3]} intensity={0.55} color={persona.accent} />
@@ -121,14 +123,14 @@ export default function AvatarStage({ level, persona }: { level: number; persona
         ) : (
           <View style={styles.loading}>
             <ActivityIndicator color={persona.accent} />
-            <Text style={styles.loadingText}>Loading avatar...</Text>
+            <Text style={styles.loadingText}>Avatar yükleniyor...</Text>
           </View>
         )}
 
         <View style={styles.overlay}>
           <View style={[styles.pulse, { opacity: 0.3 + level * 0.7 }]} />
           <Text style={styles.overlayText}>
-            {level > 0.16 ? 'Talking' : 'Quiet'} � mouth drive {Math.round(level * 100)}%
+            {level > 0.16 ? 'Konuşuyor' : 'Sessiz'} · ağız sürüşü {Math.round(level * 100)}%
           </Text>
         </View>
       </View>
@@ -173,7 +175,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   canvasBox: {
-    height: 300,
+    height: 320,
     borderRadius: 24,
     overflow: 'hidden',
     backgroundColor: '#050a14',
@@ -213,4 +215,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-

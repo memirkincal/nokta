@@ -11,7 +11,7 @@ type Props = {
 };
 
 const PERSONA = {
-  label: 'Junior-Sen',
+  label: 'Genç-Sen',
   accent: '#67e8f9',
   backdrop: 'rgba(34, 211, 238, 0.10)',
   scale: 1.2,
@@ -30,23 +30,23 @@ export default function AvatarScreen({ navigation }: Props) {
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.topRow}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Text style={styles.backText}>Back</Text>
+            <Text style={styles.backText}>Geri</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Avatar lab</Text>
+          <Text style={styles.title}>Avatar laboratuvarı</Text>
         </View>
 
         <View style={styles.hero}>
-          <Text style={styles.heroTitle}>Your face is now wired in.</Text>
+          <Text style={styles.heroTitle}>Yüzün artık uygulamaya bağlı.</Text>
           <Text style={styles.heroCopy}>
-            The GLB at `app/assets/avatar.glb` loads here, and the mouth opens with mic level. Use
-            this as the simple version first.
+            `app/assets/avatar.glb` dosyası burada yüklenir. Mikrofon seviyesi arttıkça ağız ve
+            çene hareket eder. Önce bu sade sürümü kullan.
           </Text>
         </View>
 
         <AvatarStage level={voice.level} persona={PERSONA} />
 
         <View style={styles.waveCard}>
-          <Text style={styles.sectionTitle}>Voice bars</Text>
+          <Text style={styles.sectionTitle}>Ses çubukları</Text>
           <View style={styles.bars}>
             {BARS.map((bar, index) => (
               <View
@@ -57,17 +57,17 @@ export default function AvatarScreen({ navigation }: Props) {
           </View>
           <Text style={styles.helper}>
             {voice.listening
-              ? 'Mic live. Talk and the avatar mouth reacts.'
-              : 'Tap start mic to drive the bars and lipsync.'}
+              ? 'Mikrofon açık. Konuşunca avatar tepki veriyor.'
+              : 'Çubukları ve dudak hareketini başlatmak için mikrofonu aç.'}
           </Text>
         </View>
 
         <View style={styles.steps}>
-          <Text style={styles.sectionTitle}>What you already did</Text>
-          <Text style={styles.step}>1. Put your GLB in `app/assets/avatar.glb`.</Text>
-          <Text style={styles.step}>2. This screen loads it and animates the mouth.</Text>
-          <Text style={styles.step}>3. Microphone level drives the bar animation and lipsync.</Text>
-          <Text style={styles.step}>4. If needed, replace the simple mouth mapping with a real viseme pipeline later.</Text>
+          <Text style={styles.sectionTitle}>Yapılanlar</Text>
+          <Text style={styles.step}>1. GLB dosyan `app/assets/avatar.glb` içine kondu.</Text>
+          <Text style={styles.step}>2. Bu ekran modeli yükler ve ağzı hareket ettirir.</Text>
+          <Text style={styles.step}>3. Mikrofon seviyesi çubukları ve dudak senkronunu sürer.</Text>
+          <Text style={styles.step}>4. İstersen sonra gerçek bir viseme hattı ekleyebilirsin.</Text>
         </View>
 
         <View style={styles.row}>
@@ -75,18 +75,22 @@ export default function AvatarScreen({ navigation }: Props) {
             style={[styles.primaryBtn, voice.listening && styles.secondaryBtn]}
             onPress={voice.listening ? voice.stop : voice.start}
           >
-            <Text style={styles.primaryText}>{voice.listening ? 'Stop mic' : 'Start mic'}</Text>
+            <Text style={styles.primaryText}>{voice.listening ? 'Mikrofonu kapat' : 'Mikrofonu aç'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.secondaryBtn}
             onPress={() => navigation.navigate('Bridge')}
           >
-            <Text style={styles.secondaryText}>Bridge</Text>
+            <Text style={styles.secondaryText}>Köprü</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
 
-      <AuditWidget screenName="Avatar Lab" notes={`Voice level: ${Math.round(voice.level * 100)}%`} cards={[]} />
+      <AuditWidget
+        screenName="Avatar Laboratuvarı"
+        notes={`Ses seviyesi: ${Math.round(voice.level * 100)}%`}
+        cards={[]}
+      />
     </View>
   );
 }

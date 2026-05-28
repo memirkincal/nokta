@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import { Modal, Share, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { IdeaCard } from '../services/claudeApi';
 
@@ -10,28 +10,28 @@ type Props = {
 
 export default function AuditWidget({ screenName, notes, cards = [] }: Props) {
   const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState('Burn-in note');
-  const [body, setBody] = useState('Speak the problem, then paste the fix here.');
+  const [title, setTitle] = useState('Denetim notu');
+  const [body, setBody] = useState('Sorunu söyle, sonra çözümü buraya yaz.');
 
   const markdown = useMemo(() => {
     const stamp = new Date().toISOString();
-    return `# Audit Report - ${title}
+    return `# Denetim raporu - ${title}
 
-**Screen:** ${screenName}
-**Generated:** ${stamp}
-**Card count:** ${cards.length}
+**Ekran:** ${screenName}
+**Oluşturulma:** ${stamp}
+**Kart sayısı:** ${cards.length}
 
-## Dicted note
+## Dikte edilen not
 
 ${body}
 
-## Live context
+## Canlı bağlam
 
-${notes || 'No notes yet.'}
+${notes || 'Henüz not yok.'}
 
-## Output check
+## Çıktı kontrolü
 
-The screen stays simple, the input stays readable, and the next change can be fed back into the forge.`;
+Ekran sade kalır, giriş okunaklı kalır ve sonraki değişiklik forge döngüsüne geri verilebilir.`;
   }, [body, cards.length, notes, screenName, title]);
 
   async function handleShare() {
@@ -41,20 +41,20 @@ The screen stays simple, the input stays readable, and the next change can be fe
   return (
     <>
       <TouchableOpacity style={styles.fab} onPress={() => setOpen(true)}>
-        <Text style={styles.fabText}>Audit</Text>
+        <Text style={styles.fabText}>Denetim</Text>
       </TouchableOpacity>
 
       <Modal visible={open} animationType="slide" transparent>
         <View style={styles.backdrop}>
           <View style={styles.sheet}>
-            <Text style={styles.heading}>AuditWidget</Text>
-            <Text style={styles.caption}>Screen: {screenName}</Text>
+            <Text style={styles.heading}>Denetim aracı</Text>
+            <Text style={styles.caption}>Ekran: {screenName}</Text>
 
             <TextInput
               style={styles.input}
               value={title}
               onChangeText={setTitle}
-              placeholder="Report title"
+              placeholder="Rapor başlığı"
               placeholderTextColor="#7a879d"
             />
             <TextInput
@@ -62,7 +62,7 @@ The screen stays simple, the input stays readable, and the next change can be fe
               value={body}
               onChangeText={setBody}
               multiline
-              placeholder="Dictated note"
+              placeholder="Dikte edilen not"
               placeholderTextColor="#7a879d"
             />
 
@@ -72,10 +72,10 @@ The screen stays simple, the input stays readable, and the next change can be fe
 
             <View style={styles.row}>
               <TouchableOpacity style={styles.secondaryBtn} onPress={() => setOpen(false)}>
-                <Text style={styles.secondaryText}>Close</Text>
+                <Text style={styles.secondaryText}>Kapat</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.primaryBtn} onPress={handleShare}>
-                <Text style={styles.primaryText}>Share</Text>
+                <Text style={styles.primaryText}>Paylaş</Text>
               </TouchableOpacity>
             </View>
           </View>

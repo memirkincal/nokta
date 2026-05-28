@@ -20,16 +20,16 @@ type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Dump'>;
 };
 
-const PLACEHOLDER = `WhatsApp export or rough notes work fine.
+const PLACEHOLDER = `WhatsApp dışa aktarımı ya da kaba notlar yeterli.
 
-1. Launch idea cards for student projects
-2. Need a cleaner way to deduplicate repeated decisions
-3. This pitch feels strong but the scope is too wide
-4. Follow up with design team before Friday
-5. Maybe the mobile app should highlight the most actionable items
-6. Decision: keep the first version local-first
-7. Risk: no stable API key for the demo device
-8. Repeated note: launch idea cards for student projects`;
+1. Öğrenci projeleri için fikir kartları başlat
+2. Tekrarlanan kararları tekilleştirmek için daha temiz bir yol lazım
+3. Bu sunum güçlü ama kapsamı fazla geniş
+4. Cuma gününden önce tasarım ekibiyle takip et
+5. Belki mobil uygulama en uygulanabilir maddeleri öne çıkarmalı
+6. Karar: ilk sürüm yerel öncelikli kalsın
+7. Risk: demo cihazı için kararlı API anahtarı yok
+8. Tekrar eden not: öğrenci projeleri için fikir kartları başlat`;
 
 export default function DumpScreen({ navigation }: Props) {
   const [text, setText] = useState('');
@@ -49,7 +49,7 @@ export default function DumpScreen({ navigation }: Props) {
   function appendExtraNote() {
     const next = extraNote.trim();
     if (!next) {
-      Alert.alert('Empty note', 'Type a short extra note first.');
+      Alert.alert('Boş not', 'Önce kısa bir ek not yaz.');
       return;
     }
 
@@ -60,7 +60,7 @@ export default function DumpScreen({ navigation }: Props) {
 
   async function handleAnalyze() {
     if (!text.trim()) {
-      Alert.alert('Empty input', 'Paste a note dump, pitch, or messy chat export first.');
+      Alert.alert('Boş giriş', 'Önce bir not dökümü, sunum veya dağınık metin yapıştır.');
       return;
     }
 
@@ -69,7 +69,7 @@ export default function DumpScreen({ navigation }: Props) {
       const cards: IdeaCard[] = await analyzeNotes(text);
       navigation.navigate('Cards', { cards });
     } catch (error: any) {
-      Alert.alert('Analysis failed', error?.message ?? 'Something went wrong.');
+      Alert.alert('Analiz başarısız', error?.message ?? 'Bir şeyler ters gitti.');
     } finally {
       setLoading(false);
     }
@@ -87,38 +87,38 @@ export default function DumpScreen({ navigation }: Props) {
         <View style={styles.topBar}>
           <View>
             <Text style={styles.brand}>NOKTA</Text>
-            <Text style={styles.kicker}>Idea Input, audit and handoff</Text>
+            <Text style={styles.kicker}>Fikir girişi, denetim ve köprü</Text>
           </View>
           <View style={styles.pill}>
-            <Text style={styles.pillText}>{lineCount || '0'} lines</Text>
+            <Text style={styles.pillText}>{lineCount || '0'} satır</Text>
           </View>
         </View>
 
         <View style={styles.hero}>
-          <Text style={styles.heroTitle}>Turn messy notes into idea cards.</Text>
+          <Text style={styles.heroTitle}>Dağınık notları fikir kartına çevir.</Text>
           <Text style={styles.heroCopy}>
-            Paste WhatsApp exports, bullet lists, or rough meeting notes. NOKTA groups duplicates,
-            trims the noise, and surfaces the most actionable cards.
+            WhatsApp dışa aktarımları, madde listeleri veya kaba toplantı notlarını yapıştır.
+            NOKTA tekrarları gruplayıp gürültüyü temizler ve en uygulanabilir kartları çıkarır.
           </Text>
 
           <View style={styles.chips}>
             <View style={styles.chip}>
-              <Text style={styles.chipText}>Dedup</Text>
+              <Text style={styles.chipText}>Tekilleştirme</Text>
             </View>
             <View style={styles.chip}>
-              <Text style={styles.chipText}>Traceable</Text>
+              <Text style={styles.chipText}>İzlenebilir</Text>
             </View>
             <View style={styles.chip}>
-              <Text style={styles.chipText}>AI ready</Text>
+              <Text style={styles.chipText}>Yapay zekâya hazır</Text>
             </View>
           </View>
         </View>
 
         <View style={styles.sampleBox}>
-          <Text style={styles.sampleTitle}>What it handles</Text>
+          <Text style={styles.sampleTitle}>Neleri işler</Text>
           <Text style={styles.sampleText}>
-            Repeated ideas, mixed languages, team decisions, action items, and risk notes from
-            chaotic chat logs or brainstorming dumps.
+            Karmaşık sohbet dökümlerinden veya beyin fırtınası metinlerinden gelen tekrar eden
+            fikirleri, karışık dilleri, ekip kararlarını, görevleri ve risk notlarını işler.
           </Text>
         </View>
 
@@ -133,16 +133,16 @@ export default function DumpScreen({ navigation }: Props) {
         />
 
         <View style={styles.extraNoteBox}>
-          <Text style={styles.sampleTitle}>Add extra note</Text>
+          <Text style={styles.sampleTitle}>Ek not ekle</Text>
           <TextInput
             style={styles.extraInput}
-            placeholder="Type one more line and append it to the dump"
+            placeholder="Bir satır daha yaz ve listeye ekle"
             placeholderTextColor="#7b8095"
             value={extraNote}
             onChangeText={setExtraNote}
           />
           <TouchableOpacity style={styles.extraBtn} onPress={appendExtraNote}>
-            <Text style={styles.extraBtnText}>Append note</Text>
+            <Text style={styles.extraBtnText}>Notu ekle</Text>
           </TouchableOpacity>
         </View>
 
@@ -154,26 +154,26 @@ export default function DumpScreen({ navigation }: Props) {
           {loading ? (
             <ActivityIndicator color="#0b1020" />
           ) : (
-            <Text style={styles.buttonText}>Analyze and deduplicate</Text>
+            <Text style={styles.buttonText}>Analiz et ve tekilleştir</Text>
           )}
         </TouchableOpacity>
 
         <View style={styles.linkRow}>
           <TouchableOpacity style={styles.linkBtn} onPress={() => navigation.navigate('Avatar')}>
-            <Text style={styles.linkText}>Avatar lab</Text>
+            <Text style={styles.linkText}>Avatar laboratuvarı</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.linkBtn} onPress={() => navigation.navigate('Bridge')}>
-            <Text style={styles.linkText}>Expert bridge</Text>
+            <Text style={styles.linkText}>Uzman köprüsü</Text>
           </TouchableOpacity>
         </View>
 
         <Text style={styles.footerNote}>
-          Local fallback is built in. The APK reads `EXPO_PUBLIC_GEMINI_API_KEY` from build-time
-          config, so rebuild after editing `app/.env.local` if you want model-backed extraction.
+          Yerel yedek akış hazır. APK, `EXPO_PUBLIC_GEMINI_API_KEY` değerini derleme sırasında
+          okur; `app/.env.local` dosyasını değiştirirsen yeniden derlemen gerekir.
         </Text>
       </ScrollView>
 
-      <AuditWidget screenName="Idea Input" notes={text} cards={[]} />
+      <AuditWidget screenName="Fikir girişi" notes={text} cards={[]} />
     </KeyboardAvoidingView>
   );
 }
@@ -279,77 +279,74 @@ const styles = StyleSheet.create({
   },
   sampleBox: {
     backgroundColor: 'rgba(8, 15, 33, 0.92)',
-    borderColor: 'rgba(34, 211, 238, 0.16)',
+    borderRadius: 24,
     borderWidth: 1,
-    borderRadius: 20,
+    borderColor: 'rgba(148, 163, 184, 0.16)',
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 14,
+    gap: 8,
   },
   sampleTitle: {
-    color: '#e2e8f0',
-    fontSize: 14,
-    fontWeight: '800',
-    marginBottom: 6,
+    color: '#f8fafc',
+    fontSize: 16,
+    fontWeight: '900',
   },
   sampleText: {
-    color: '#94a3b8',
-    fontSize: 13,
+    color: '#cbd5e1',
     lineHeight: 20,
+  },
+  input: {
+    minHeight: 220,
+    backgroundColor: 'rgba(8, 15, 33, 0.92)',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.16)',
+    padding: 16,
+    color: '#f8fafc',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 14,
   },
   extraNoteBox: {
     backgroundColor: 'rgba(8, 15, 33, 0.92)',
-    borderColor: 'rgba(34, 211, 238, 0.16)',
+    borderRadius: 24,
     borderWidth: 1,
-    borderRadius: 20,
+    borderColor: 'rgba(148, 163, 184, 0.16)',
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 14,
+    gap: 10,
   },
   extraInput: {
     backgroundColor: '#0f172a',
-    color: '#f8fafc',
-    borderColor: 'rgba(148, 163, 184, 0.2)',
-    borderWidth: 1,
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.18)',
     paddingHorizontal: 14,
     paddingVertical: 12,
-    marginTop: 6,
-    marginBottom: 12,
+    color: '#f8fafc',
   },
   extraBtn: {
-    backgroundColor: '#22d3ee',
-    borderRadius: 14,
+    backgroundColor: '#67e8f9',
+    borderRadius: 16,
     paddingVertical: 12,
     alignItems: 'center',
   },
   extraBtnText: {
-    color: '#07111f',
-    fontSize: 13,
+    color: '#08111f',
     fontWeight: '900',
   },
-  input: {
-    backgroundColor: '#0f172a',
-    color: '#f8fafc',
-    borderColor: 'rgba(148, 163, 184, 0.2)',
-    borderWidth: 1,
-    borderRadius: 24,
-    minHeight: 250,
-    padding: 18,
-    fontSize: 14,
-    lineHeight: 21,
-    marginBottom: 16,
-  },
   button: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#facc15',
     borderRadius: 18,
-    paddingVertical: 16,
+    paddingVertical: 15,
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   buttonDisabled: {
     opacity: 0.75,
   },
   buttonText: {
-    color: '#0b1020',
+    color: '#08111f',
     fontSize: 16,
     fontWeight: '900',
   },
@@ -360,20 +357,19 @@ const styles = StyleSheet.create({
   },
   linkBtn: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.2)',
-    borderRadius: 16,
-    paddingVertical: 12,
-    alignItems: 'center',
     backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.18)',
+    borderRadius: 18,
+    paddingVertical: 13,
+    alignItems: 'center',
   },
   linkText: {
     color: '#e2e8f0',
     fontWeight: '800',
-    fontSize: 13,
   },
   footerNote: {
-    color: '#7c8aa6',
+    color: '#94a3b8',
     fontSize: 12,
     lineHeight: 18,
   },
