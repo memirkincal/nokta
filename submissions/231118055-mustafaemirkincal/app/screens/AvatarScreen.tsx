@@ -1,19 +1,26 @@
 import React from 'react';
-import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../App';
 import AuditWidget from '../components/AuditWidget';
+import AvatarStage from '../src/components/AvatarStage';
+import { useVoiceLevel } from '../src/hooks/useVoiceLevel';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Avatar'>;
 };
 
-const VISUAL_BARS = [0.42, 0.68, 0.24, 0.74, 0.54, 0.33, 0.62, 0.21];
+const PERSONA = {
+  label: 'Junior-Sen',
+  accent: '#67e8f9',
+  backdrop: 'rgba(34, 211, 238, 0.10)',
+  scale: 1.2,
+};
+
+const BARS = [0.42, 0.68, 0.24, 0.74, 0.54, 0.33, 0.62, 0.21];
 
 export default function AvatarScreen({ navigation }: Props) {
-  async function openAssetGuide() {
-    await Linking.openURL('https://avaturn.me');
-  }
+  const voice = useVoiceLevel();
 
   return (
     <View style={styles.container}>
@@ -29,45 +36,57 @@ export default function AvatarScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.hero}>
-          <Text style={styles.heroTitle}>Put your face here later.</Text>
+          <Text style={styles.heroTitle}>Your face is now wired in.</Text>
           <Text style={styles.heroCopy}>
-            Replace the placeholder with your custom `avatar.glb`, then connect voice level and lipsync.
+            The GLB at `app/assets/avatar.glb` loads here, and the mouth opens with mic level. Use
+            this as the simple version first.
           </Text>
         </View>
 
-        <View style={styles.stage}>
-          <View style={styles.face}>
-            <View style={styles.eyeRow}>
-              <View style={styles.eye} />
-              <View style={styles.eye} />
-            </View>
-            <View style={styles.mouth} />
-          </View>
-        </View>
+        <AvatarStage level={voice.level} persona={PERSONA} />
 
         <View style={styles.waveCard}>
           <Text style={styles.sectionTitle}>Voice bars</Text>
           <View style={styles.bars}>
-            {VISUAL_BARS.map((bar, index) => (
-              <View key={String(index)} style={[styles.bar, { height: 24 + bar * 64 }]} />
+            {BARS.map((bar, index) => (
+              <View
+                key={String(index)}
+                style={[styles.bar, { height: 24 + bar * 64, opacity: 0.3 + voice.level * 0.7 }]}
+              />
             ))}
           </View>
+          <Text style={styles.helper}>
+            {voice.listening
+              ? 'Mic live. Talk and the avatar mouth reacts.'
+              : 'Tap start mic to drive the bars and lipsync.'}
+          </Text>
         </View>
 
         <View style={styles.steps}>
-          <Text style={styles.sectionTitle}>What you do next</Text>
-          <Text style={styles.step}>1. Export your face from Avaturn as GLB.</Text>
-          <Text style={styles.step}>2. Save it as `app/assets/avatar.glb`.</Text>
-          <Text style={styles.step}>3. Later, map mouth/jaw nodes to the mic level or viseme data.</Text>
-          <Text style={styles.step}>4. Rebuild the APK after the asset is added.</Text>
+          <Text style={styles.sectionTitle}>What you already did</Text>
+          <Text style={styles.step}>1. Put your GLB in `app/assets/avatar.glb`.</Text>
+          <Text style={styles.step}>2. This screen loads it and animates the mouth.</Text>
+          <Text style={styles.step}>3. Microphone level drives the bar animation and lipsync.</Text>
+          <Text style={styles.step}>4. If needed, replace the simple mouth mapping with a real viseme pipeline later.</Text>
         </View>
 
-        <TouchableOpacity style={styles.primaryBtn} onPress={openAssetGuide}>
-          <Text style={styles.primaryText}>Open Avaturn</Text>
-        </TouchableOpacity>
+        <View style={styles.row}>
+          <TouchableOpacity
+            style={[styles.primaryBtn, voice.listening && styles.secondaryBtn]}
+            onPress={voice.listening ? voice.stop : voice.start}
+          >
+            <Text style={styles.primaryText}>{voice.listening ? 'Stop mic' : 'Start mic'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.secondaryBtn}
+            onPress={() => navigation.navigate('Bridge')}
+          >
+            <Text style={styles.secondaryText}>Bridge</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
-      <AuditWidget screenName="Avatar Lab" notes="Avatar placeholder and voice bars." cards={[]} />
+      <AuditWidget screenName="Avatar Lab" notes={`Voice level: ${Math.round(voice.level * 100)}%`} cards={[]} />
     </View>
   );
 }
@@ -140,43 +159,6 @@ const styles = StyleSheet.create({
     color: '#cbd5e1',
     lineHeight: 20,
   },
-  stage: {
-    backgroundColor: 'rgba(8, 15, 33, 0.92)',
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(34, 211, 238, 0.14)',
-    height: 280,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  face: {
-    width: 180,
-    height: 180,
-    borderRadius: 48,
-    borderWidth: 2,
-    borderColor: '#67e8f9',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 18,
-    backgroundColor: 'rgba(103, 232, 249, 0.06)',
-  },
-  eyeRow: {
-    flexDirection: 'row',
-    gap: 30,
-  },
-  eye: {
-    width: 14,
-    height: 14,
-    borderRadius: 14,
-    backgroundColor: '#67e8f9',
-  },
-  mouth: {
-    width: 56,
-    height: 18,
-    borderBottomWidth: 4,
-    borderBottomColor: '#67e8f9',
-    borderRadius: 18,
-  },
   waveCard: {
     backgroundColor: 'rgba(15, 23, 42, 0.92)',
     borderWidth: 1,
@@ -201,7 +183,11 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 99,
     backgroundColor: '#67e8f9',
-    opacity: 0.85,
+  },
+  helper: {
+    color: '#94a3b8',
+    fontSize: 12,
+    lineHeight: 18,
   },
   steps: {
     backgroundColor: 'rgba(15, 23, 42, 0.92)',
@@ -215,14 +201,32 @@ const styles = StyleSheet.create({
     color: '#cbd5e1',
     lineHeight: 20,
   },
+  row: {
+    flexDirection: 'row',
+    gap: 10,
+  },
   primaryBtn: {
+    flex: 1,
     backgroundColor: '#facc15',
+    borderRadius: 18,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  secondaryBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.2)',
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
     borderRadius: 18,
     paddingVertical: 14,
     alignItems: 'center',
   },
   primaryText: {
     color: '#08111f',
+    fontWeight: '900',
+  },
+  secondaryText: {
+    color: '#e2e8f0',
     fontWeight: '900',
   },
 });
