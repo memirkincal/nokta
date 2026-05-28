@@ -1,4 +1,4 @@
-﻿import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Asset } from 'expo-asset';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Canvas, useFrame, useLoader } from '@react-three/fiber/native';
@@ -21,12 +21,13 @@ type GLTFScene = {
 function AvatarMesh({ level, persona, uri }: { level: number; persona: Persona; uri: string }) {
   const group = useRef<THREE.Group>(null);
   const gltf = useLoader(GLTFLoader, uri) as unknown as GLTFScene;
+  const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
 
   const mouth = useMemo(() => {
     let mouthNode: THREE.Object3D | null = null;
     let jawNode: THREE.Object3D | null = null;
 
-    gltf.scene.traverse((object: THREE.Object3D) => {
+    scene.traverse((object: THREE.Object3D) => {
       const name = String(object.name || '').toLowerCase();
       if (!mouthNode && (name.includes('mouth') || name.includes('lip'))) {
         mouthNode = object;
@@ -37,18 +38,40 @@ function AvatarMesh({ level, persona, uri }: { level: number; persona: Persona; 
     });
 
     return { mouthNode, jawNode } as { mouthNode: THREE.Object3D | null; jawNode: THREE.Object3D | null };
-  }, [gltf.scene]);
+  }, [scene]);
 
-  useEffect(() => {
-    gltf.scene.traverse((object: THREE.Object3D) => {
+  useLayoutEffect(() => {
+    const box = new THREE.Box3().setFromObject(scene);
+    const size = new THREE.Vector3();
+    const center = new THREE.Vector3();
+    box.getSize(size);
+    box.getCenter(center);
+
+    const maxDim = Math.max(size.x, size.y, size.z, 1);
+    const fittedScale = 1.65 / maxDim;
+
+    scene.traverse((object: THREE.Object3D) => {
       if (object instanceof THREE.Mesh && object.material) {
         const material = object.material as THREE.MeshStandardMaterial | THREE.MeshBasicMaterial;
         if ('color' in material && material.color) {
           material.color = new THREE.Color(persona.accent);
         }
+        if ('roughness' in material) {
+          material.roughness = 0.55;
+        }
+        if ('metalness' in material) {
+          material.metalness = 0.05;
+        }
       }
     });
-  }, [gltf.scene, persona.accent]);
+
+    scene.scale.setScalar(fittedScale);
+    scene.position.set(
+      -center.x * fittedScale,
+      -center.y * fittedScale + size.y * fittedScale * 0.18,
+      -center.z * fittedScale,
+    );
+  }, [scene, persona.accent]);
 
   useFrame(({ clock }) => {
     const root = group.current;
@@ -57,10 +80,10 @@ function AvatarMesh({ level, persona, uri }: { level: number; persona: Persona; 
     }
 
     const t = clock.getElapsedTime();
-    root.rotation.y = Math.sin(t * 0.8) * 0.15;
-    root.rotation.x = Math.sin(t * 0.5) * 0.04 - 0.03;
-    root.position.y = 0.26 + Math.sin(t * 1.1) * 0.025;
-    root.position.z = -0.05;
+    root.rotation.y = Math.sin(t * 0.8) * 0.08;
+    root.rotation.x = Math.sin(t * 0.5) * 0.03 - 0.02;
+    root.position.y = Math.sin(t * 1.1) * 0.015;
+    root.position.z = 0;
 
     if (mouth.mouthNode) {
       mouth.mouthNode.scale.y = 0.8 + level * 1.9;
@@ -72,7 +95,7 @@ function AvatarMesh({ level, persona, uri }: { level: number; persona: Persona; 
     }
   });
 
-  return <primitive ref={group} object={gltf.scene} scale={persona.scale} dispose={null} />;
+  return <primitive ref={group} object={scene} scale={persona.scale} dispose={null} />;
 }
 
 export default function AvatarStage({ level, persona }: { level: number; persona: Persona }) {
@@ -112,7 +135,7 @@ export default function AvatarStage({ level, persona }: { level: number; persona
 
       <View style={styles.canvasBox}>
         {uri ? (
-          <Canvas camera={{ position: [0, 0.65, 2.8], fov: 28 }}>
+          <Canvas camera={{ position: [0, 0.75, 3.1], fov: 24 }}>
             <ambientLight intensity={0.95} />
             <directionalLight position={[3, 4, 5]} intensity={1.35} />
             <pointLight position={[-2, -1, 3]} intensity={0.55} color={persona.accent} />
